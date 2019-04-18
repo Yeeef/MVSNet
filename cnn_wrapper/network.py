@@ -17,7 +17,8 @@ from tools.common import Notify
 
 DEFAULT_PADDING = 'SAME'
 
-
+# lyf: elegant, beautiful
+# op is a func, layer_decorated is used to wrap / decorate the op
 def layer(op):
     """Decorator for composable network layers."""
 
@@ -118,13 +119,14 @@ class Network(object):
         session.run(assign_op)
 
     def feed(self, *args):
-        '''Set the input(s) for the next operation by replacing the terminal nodes.
+        '''
+        Set the input(s) for the next operation by replacing the terminal nodes.
         The arguments can be either layer names or the actual layers.
         '''
         assert args
         self.terminals = []
         for fed_layer in args:
-            if isinstance(fed_layer, basestring):
+            if isinstance(fed_layer, str):
                 try:
                     fed_layer = self.layers[fed_layer]
                 except KeyError:

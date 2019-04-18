@@ -18,6 +18,7 @@ class UniNetDS2(Network):
         print ('2D with 32 filters')
         base_filter = 8
         (self.feed('data')
+         # kernel_size=3, filters=8, strides=1, default with ReLU
         .conv_bn(3, base_filter, 1, center=True, scale=True, name='conv0_0')
         .conv_bn(3, base_filter, 1, center=True, scale=True, name='conv0_1')
         .conv_bn(5, base_filter * 2, 2, center=True, scale=True, name='conv1_0')
@@ -26,6 +27,7 @@ class UniNetDS2(Network):
         .conv_bn(5, base_filter * 4, 2, center=True, scale=True, name='conv2_0')
         .conv_bn(3, base_filter * 4, 1, center=True, scale=True, name='conv2_1')
         .conv(3, base_filter * 4, 1, biased=False, relu=False, name='conv2_2'))
+
 
 class UniNetDS2GN(Network):
     """Simple UniNet with group normalization."""
@@ -145,6 +147,7 @@ class RegNetUS0(Network):
         .add(name='3dconv6_1')
         .conv(3, 1, 1, biased=False, relu=False, name='3dconv6_2'))
 
+
 class RefineNet(Network):
     """network for depth map refinement using original image."""
 
@@ -161,4 +164,3 @@ class RefineNet(Network):
 
         (self.feed('refine_conv3', 'depth_image')
         .add(name='refined_depth_image'))
-    

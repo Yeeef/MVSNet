@@ -16,6 +16,7 @@ from homography_warping import *
 
 FLAGS = tf.app.flags.FLAGS
 
+
 def get_propability_map(cv, depth_map, depth_start, depth_interval):
     """ get probability map from cost volume """
 
@@ -69,6 +70,7 @@ def get_propability_map(cv, depth_map, depth_start, depth_interval):
 
     return prob_map
 
+
 def inference(images, cams, depth_num, depth_start, depth_interval, is_master_gpu=True):
     """ infer depth image from multi-view images and cameras """
 
@@ -108,7 +110,7 @@ def inference(images, cams, depth_num, depth_start, depth_interval, is_master_gp
             for view in range(0, FLAGS.view_num - 1):
                 homography = tf.slice(view_homographies[view], begin=[0, d, 0, 0], size=[-1, 1, 3, 3])
                 homography = tf.squeeze(homography, axis=1)
-				# warped_view_feature = homography_warping(view_towers[view].get_output(), homography)
+                # warped_view_feature = homography_warping(view_towers[view].get_output(), homography)
                 warped_view_feature = tf_transform_homography(view_towers[view].get_output(), homography)
                 ave_feature = ave_feature + warped_view_feature
                 ave_feature2 = ave_feature2 + tf.square(warped_view_feature)
@@ -145,6 +147,7 @@ def inference(images, cams, depth_num, depth_start, depth_interval, is_master_gp
     prob_map = get_propability_map(probability_volume, estimated_depth_map, depth_start, depth_interval)
 
     return estimated_depth_map, prob_map#, filtered_depth_map, probability_volume
+
 
 def inference_mem(images, cams, depth_num, depth_start, depth_interval, is_master_gpu=True):
     """ infer depth image from multi-view images and cameras """
@@ -329,6 +332,7 @@ def inference_prob_recurrent(images, cams, depth_num, depth_start, depth_interva
 
     return prob_volume
 
+
 def inference_winner_take_all(images, cams, depth_num, depth_start, depth_end, 
                               is_master_gpu=True, reg_type='GRU', inverse_depth=False):
     """ infer disparity image from stereo images and cameras """
@@ -459,6 +463,7 @@ def inference_winner_take_all(images, cams, depth_num, depth_start, depth_end,
     forward_exp_sum = exp_sum + 1e-7
     forward_depth_map = depth_image
     return forward_depth_map, max_prob_image / forward_exp_sum
+
 
 def depth_refine(init_depth_map, image, depth_num, depth_start, depth_interval, is_master_gpu=True):
     """ refine depth image with the image """

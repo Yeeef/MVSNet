@@ -52,6 +52,7 @@ tf.app.flags.DEFINE_integer('max_h', 512,
                             """Maximum image height when training.""")
 tf.app.flags.DEFINE_float('sample_scale', 0.25, 
                             """Downsample scale for building cost volume.""")
+# // TODO: doc bug, it is
 tf.app.flags.DEFINE_float('interval_scale', 1.06, 
                             """Downsample scale for building cost volume.""")
 
@@ -109,6 +110,7 @@ class MVSGenerator:
                 depth_image = load_pfm(open(data[2 * self.view_num]))
 
                 # mask out-of-range depth pixels (in a relaxed range)
+                # // TODO: why not clip?
                 depth_start = cams[0][1, 3, 0] + cams[0][1, 3, 1]
                 depth_end = cams[0][1, 3, 0] + (FLAGS.max_d - 2) * cams[0][1, 3, 1]
                 depth_image = mask_depth_image(depth_image, depth_start, depth_end)

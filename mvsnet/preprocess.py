@@ -397,6 +397,7 @@ def gen_dtu_mvs_path(dtu_data_folder, mode='training'):
         
     return sample_list
 
+
 def gen_mvs_list(mode='training'):
     """output paths in a list: [[I1_path1,  C1_path, I2_path, C2_path, ...(, D1_path)], [...], ...]"""
     sample_list = []
@@ -404,6 +405,7 @@ def gen_mvs_list(mode='training'):
         dtu_sample_list = gen_dtu_mvs_path(FLAGS.dtu_data_root, mode=mode)
         sample_list = sample_list + dtu_sample_list
     return sample_list
+
 
 # for testing
 def gen_pipeline_mvs_list(dense_folder):
