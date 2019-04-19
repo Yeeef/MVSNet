@@ -75,17 +75,90 @@ def center_image(img):
     return (img - mean) / (np.sqrt(var) + 0.00000001)
 ```
 
+- load_cam, cam 是一个 2\*4\*4 维度的矩阵，cam[1] 是 extrinsic 矩阵，cam[2] 是intrinsic 矩阵，需要注意的是，extrinsic 矩阵确实有 4×4 但是 intrinsic 实际上只有 3*3 , cam 有一些位置是浪费的，这样设置只是为了自己处理方便一些
+- cam[1, 3] 的四个元素比较有意思，需要格外注意一下
+  - 0th: _DEPTH_MIN_
+  - 1th: _DEPTH_INTERVAL_
+  - 2th: _DEPTH_NUM_
+  - 3th: _DEPTH_MAX_
+  
+- github 上的注意事项： Note that the depth range and depth resolution are determined by the minimum depth DEPTH_MIN, the interval between two depth samples DEPTH_INTERVAL, and also the depth sample number DEPTH_NUM (or max_d in the training/testing scripts if DEPTH_NUM is not provided). We also left the interval_scale for controlling the depth resolution. The maximum depth is then computed as:
 
-### model architecture
+DEPTH_MAX = DEPTH_MIN + (interval_scale * DEPTH_INTERVAL) * (max_d - 1)
+
+- 也就是说，如果不提供 DEPTH_MAX 与 DEPTH_NUM，DEPTH_MAX 将由上述公式进行计算
+- 如果提供了 DEPTH_NUM, 则将公式中的 max_d 替换为 DEPTH_NUM
+- 如果提供了 DEPTH_MAX 则不利用上述公式
+
+
+```python
+def load_cam(file, interval_scale=1):
+    """ read camera txt file """
+    cam = np.zeros((2, 4, 4))
+    words = file.read().split()
+    # read extrinsic
+    for i in range(0, 4):
+        for j in range(0, 4):
+            extrinsic_index = 4 * i + j + 1
+            cam[0][i][j] = words[extrinsic_index]
+
+    # read intrinsic
+    for i in range(0, 3):
+        for j in range(0, 3):
+            intrinsic_index = 3 * i + j + 18
+            cam[1][i][j] = words[intrinsic_index]
+            
+    if len(words) == 29:
+        cam[1][3][0] = words[27]
+        cam[1][3][1] = float(words[28]) * interval_scale
+        cam[1][3][2] = FLAGS.max_d
+        cam[1][3][3] = cam[1][3][0] + cam[1][3][1] * cam[1][3][2]
+    elif len(words) == 30:
+        cam[1][3][0] = words[27]
+        cam[1][3][1] = float(words[28]) * interval_scale
+        cam[1][3][2] = words[29]
+        cam[1][3][3] = cam[1][3][0] + cam[1][3][1] * cam[1][3][2]
+    elif len(words) == 31:
+        cam[1][3][0] = words[27]
+        cam[1][3][1] = float(words[28]) * interval_scale
+        cam[1][3][2] = words[29]
+        cam[1][3][3] = words[30]
+    else:
+        cam[1][3][0] = 0
+        cam[1][3][1] = 0
+        cam[1][3][2] = 0
+        cam[1][3][3] = 0
+
+    return cam
+
+```
+
+- load_pfm __depth_image__ 的读取
+
+
+## model architecture
 
 - 网络 base class 在 cnn_wrapper/network.py 下定义，cnn_wrapper/mvsnet.py 定义了网络前端 feature 网路以及中间的 cost volume 网络，以及最后的 depth map refinement, 网络的结合在 mvsnet/model.py 中的 `inference` 函数中定义, 其中也包含了 homography warping 等操作。
 
-#### front end: deep feature extraction
+### front end: deep feature extraction
 
 - share weights between N branches
 - output N 32-channel feature maps downsized by 4
 
-#### core part: cost volume construction
+#### details
+
+- conv 的 kernel_initializer? bias_initializer? need bias? layer_regularizer?
+- kernel_initializer is the default initializer of `tf.layers.conv2d`, default is `glorot_uniform_initializer`
+- bias_initialzer is the default initializer: `tf.zeros_initializer()`
+- kernel regularizer: tf.contrib.layers.l2_regularizer(1.0)
+- if biased, bias regularizer: tf.contrib.layers.l2_regularizer(1.0)
+- bn_epsilon is 1e-5
+- 所有卷积层，包括最后一个没有 bn 的，都没有 Biased
+- Bn 的 epsilon 为 1e-5
+  - is_training = True
+  - 我们需要重头训练，所以不需要把 is_training 设置为 False
+
+### core part: cost volume construction
 
 - build a _3D cost volume_ from the extracted feature maps and input cameras.
 - feature volume size: W/4 * H/4 * D * F (F is the number of channels, ie. 32)
@@ -93,6 +166,12 @@ def center_image(img):
   - last conv layer outputs a 1-channel volume (Probability Volume)
 - retrive depth map estimation from probability volume via _soft argmin_ (expectation, approxiamates argmax to some degree), output depth map is W/4 * H/4 
 - depth map refinement
+- 发现 bug 已经向作者提交 issue
+
+### cost volume regulariztion
+
+- 均为 conv3D, biased=False
+- kernel_initializer=`glorot_uniform_initializer`
 
 ## our network architecture
 
@@ -100,6 +179,9 @@ Why are you interested in this programme?
 Is there any particular project (or research topic) done at HKU CS that is of great interest to you?
 What would you like to achieve from this experience?
 
-### Why are you interested in this programme?
+## problems
+
+- 各个 gpu 之间共享参数需要显式指定 reuse=True 吗？
+- channel_first 带来的一些副作用，要好好看一遍，尤其是 conv3d 出来的大小
 
 

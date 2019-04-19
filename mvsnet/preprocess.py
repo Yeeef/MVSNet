@@ -197,6 +197,7 @@ def load_pfm(file):
     data = cv2.flip(data, 0)
     return data
 
+
 def write_pfm(file, image, scale=1):
     file = file_io.FileIO(file, mode='wb')
     color = None

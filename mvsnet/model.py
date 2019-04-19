@@ -24,7 +24,7 @@ def get_propability_map(cv, depth_map, depth_start, depth_interval):
         """ repeat each element num_repeats times """
         x = tf.reshape(x, [-1])
         ones = tf.ones((1, num_repeats), dtype='int32')
-        x = tf.reshape(x, shape=(-1,1))
+        x = tf.reshape(x, shape=(-1, 1))
         x = tf.matmul(x, ones)
         return tf.reshape(x, [-1])
 

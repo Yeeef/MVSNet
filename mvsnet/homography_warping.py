@@ -202,9 +202,10 @@ def homography_warping(input_image, homography):
     return warped_image
 def tf_transform_homography(input_image, homography):
 
-	# tf.contrib.image.transform is for pixel coordinate but our
-	# homograph parameters are for image coordinate (x_p = x_i + 0.5).
-	# So need to change the corresponding homography parameters 
+    # tf.contrib.image.transform is for pixel coordinate but our
+    # homograph parameters are for image coordinate (x_p = x_i + 0.5).
+    # So need to change the corresponding homography parameters
+
     homography = tf.reshape(homography, [-1, 9])
     a0 = tf.slice(homography, [0, 0], [-1, 1])
     a1 = tf.slice(homography, [0, 1], [-1, 1])
