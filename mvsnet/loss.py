@@ -23,6 +23,8 @@ def non_zero_mean_absolute_diff(y_true, y_pred, interval):
         masked_mae = tf.reduce_sum((masked_mae / interval) / denom)         # 1
     return masked_mae
 
+
+
 def less_one_percentage(y_true, y_pred, interval):
     """ less one accuracy for one batch """
     with tf.name_scope('less_one_error'):
@@ -44,6 +46,7 @@ def less_three_percentage(y_true, y_pred, interval):
         abs_diff_image = tf.abs(y_true - y_pred) / interval_image
         less_three_image = mask_true * tf.cast(tf.less_equal(abs_diff_image, 3.0), dtype='float32')
     return tf.reduce_sum(less_three_image) / denom
+
 
 def mvsnet_regression_loss(estimated_depth_image, depth_image, depth_interval):
     """ compute loss and accuracy """

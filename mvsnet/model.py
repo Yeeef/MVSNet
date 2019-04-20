@@ -146,7 +146,7 @@ def inference(images, cams, depth_num, depth_start, depth_interval, is_master_gp
     # probability map
     prob_map = get_propability_map(probability_volume, estimated_depth_map, depth_start, depth_interval)
 
-    return estimated_depth_map, prob_map#, filtered_depth_map, probability_volume
+    return estimated_depth_map, prob_map  #, filtered_depth_map, probability_volume
 
 
 def inference_mem(images, cams, depth_num, depth_start, depth_interval, is_master_gpu=True):

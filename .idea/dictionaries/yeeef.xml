@@ -1,9 +1,13 @@
 <component name="ProjectDictionaryState">
   <dictionary name="yeeef">
     <words>
+      <w>argmin</w>
+      <w>conv</w>
       <w>dconv</w>
       <w>homographies</w>
       <w>imgs</w>
+      <w>mvsnet</w>
+      <w>nchw</w>
     </words>
   </dictionary>
 </component>

@@ -67,6 +67,7 @@ def get_homographies(batch_left_cam, batch_right_cam, depth_num, depth_start, de
 
 def build_cost_volume(view_homographies, feature_maps, depth_num):
     _, view_num, c, h, w = feature_maps.get_shape().as_list()
+    # shape: b, c, h, w
     ref_feature_map = feature_maps[:, 0]
     with tf.variable_scope('cost_volume_homography'):
         depth_costs = []
@@ -89,6 +90,8 @@ def build_cost_volume(view_homographies, feature_maps, depth_num):
             depth_costs.append(cost)
         # shape of cost_volume: b, depth_num, c, h, w
         cost_volume = tf.stack(depth_costs, axis=1)
+        # change cost volume to channels_first form
+        cost_volume = tf.transpose(cost_volume, [0, 2, 1, 3, 4])
 
     return cost_volume
 
@@ -140,19 +143,4 @@ def tf_transform_homography(input_image, homography):
     # return input_image
     return warped_image
 
-
-def get_depth_meta(cams):
-    """
-
-    :param cams: shape: batch, view_num
-    :return: depth_start, depth_interval
-    """
-    ref_cam = cams[:, 0]
-    batch_size = tf.shape(cams)[0]
-    depth_start = tf.map_fn(lambda cam: cam.depth_min, ref_cam)
-    assert depth_start.get_shape().as_list() == [batch_size]
-    depth_interval = tf.map_fn(lambda cam: cam.depth_interval, ref_cam)
-    assert depth_interval.get_shape().as_list() == [batch_size]
-
-    return depth_start, depth_interval
 

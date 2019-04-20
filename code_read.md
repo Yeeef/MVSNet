@@ -157,6 +157,7 @@ def load_cam(file, interval_scale=1):
 - Bn 的 epsilon 为 1e-5
   - is_training = True
   - 我们需要重头训练，所以不需要把 is_training 设置为 False
+  - gamma, beta 并不设有 regularizer
 
 ### core part: cost volume construction
 
@@ -173,6 +174,10 @@ def load_cam(file, interval_scale=1):
 - 均为 conv3D, biased=False
 - kernel_initializer=`glorot_uniform_initializer`
 
+### refinement
+
+- 注意最后一层 conv 允许 bias
+
 ## our network architecture
 
 Why are you interested in this programme?
@@ -183,5 +188,13 @@ What would you like to achieve from this experience?
 
 - 各个 gpu 之间共享参数需要显式指定 reuse=True 吗？
 - channel_first 带来的一些副作用，要好好看一遍，尤其是 conv3d 出来的大小
-
-
+- 多 gpu 下的 summary 怎么搞
+- 这是害怕 exp 之后溢出？
+```python
+probability_volume = tf.nn.softmax(
+            tf.scalar_mul(-1, filtered_cost_volume), axis=1, name='prob_volume')
+```
+- refine_depth 过程中需要 resize image, 是否需要要把图片 h+1, w+1?
+- 仔细检查是否有其他地方使用了 resize
+- batch norm 是否有 regularizers
+- 他的 regularize 的 \lambda 为1，不知道是不是太大了，本着尽量复现的原则，暂时还是在各层中设置 regularizer，最后再写成 wd_cost 的形式
