@@ -85,6 +85,7 @@ tf.app.flags.DEFINE_float('gamma', 0.9,
 
 FLAGS = tf.app.flags.FLAGS
 
+
 class MVSGenerator:
     """ data generator class, tf only accept generator without param """
     def __init__(self, sample_list, view_num):

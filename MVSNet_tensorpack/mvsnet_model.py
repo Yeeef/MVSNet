@@ -38,9 +38,16 @@ class MVSNet(ModelDesc):
 
     debug_param_summary = False
 
-    def __init__(self, interval_scale, depth_num):
+    base_lr = 1e-3
+
+    """Step interval to decay learning rate."""
+    decay_steps = 10000
+
+    """Learning rate decay rate"""
+    decay_rate = 0.9
+
+    def __init__(self, depth_num):
         super(MVSNet, self).__init__()
-        self.interval_scale = interval_scale
         self.depth_num = depth_num
 
     def inputs(self):
@@ -94,9 +101,13 @@ class MVSNet(ModelDesc):
             less_one_acc = tf.identity(less_one_acc, name='less_one_acc')
             less_three_acc = tf.identity(less_three_acc, name='less_three_acc')
 
-            with tf.device('/cpu:0'):
-                add_moving_summary(loss, less_one_acc, less_three_acc)
-            
+            with tf.variable_scope('summaries'):
+                with tf.device('/cpu:0'):
+                    add_moving_summary(loss, less_one_acc, less_three_acc)
+                add_image_summary(tf.squeeze(coarse_depth, axis=1), name='coarse_depth')
+                add_image_summary(tf.squeeze(refine_depth, axis=1), name='refine_depth')
+                add_image_summary(tf.transpose(ref_img, [0, 2, 3, 1]), name='rgb')
+                add_image_summary(tf.transpose(gt_depth, [0, 2, 3, 1]), name='gt_depth')
 
             if self.debug_param_summary:
                 with tf.device('/cpu:0'):
@@ -110,10 +121,16 @@ class MVSNet(ModelDesc):
                     for var, grad in zip(all_vars, grad_vars):
                         add_tensor_summary(grad, ['histogram', 'rms'], name=var.name + '-grad')
 
-
-
-
         return loss
 
     def optimizer(self):
-        pass
+        lr = tf.train.exponential_decay(
+            self.base_lr,
+            global_step=get_global_step_var(),
+            decay_steps=self.decay_steps,
+            decay_rate=self.decay_rate,
+            name='learning-rate'
+        )
+        opt = tf.train.RMSPropOptimizer(learning_rate=lr)
+        tf.summary.scalar('lr', lr)
+        return opt
