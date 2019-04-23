@@ -2,18 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="213667f0-d67c-488a-9fa6-2ff0dbd4dd6a" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/MVSNet_tensorpack/loss_utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/MVSNet_tensorpack/summary_utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/MVSNet_tensorpack/upsample_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/yeeef.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dictionaries/yeeef.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/homography_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/homography_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/nn_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/nn_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_read.md" beforeDir="false" afterPath="$PROJECT_DIR$/code_read.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mvsnet/loss.py" beforeDir="false" afterPath="$PROJECT_DIR$/mvsnet/loss.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mvsnet/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/mvsnet/model.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -28,7 +17,7 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="589">
+                <state relative-caret-position="1615">
                   <caret line="98" column="12" selection-start-line="98" selection-start-column="12" selection-end-line="98" selection-end-column="12" />
                   <folding>
                     <element signature="e#0#24#0" expanded="true" />
@@ -253,7 +242,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds" extendedState="7">
     <option name="x" value="992" />
     <option name="y" value="24" />
     <option name="width" value="928" />
@@ -324,15 +313,15 @@
       <option name="presentableId" value="Default" />
       <updated>1555382030625</updated>
       <workItem from="1555382034885" duration="13637000" />
-      <workItem from="1555653861353" duration="42213000" />
+      <workItem from="1555653861353" duration="43411000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="55850000" />
+    <option name="totallyTimeSpent" value="57048000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="65" y="-4" width="1855" height="1084" extended-state="6" />
+    <frame x="65" y="-4" width="1855" height="1084" extended-state="7" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" weight="0.29408512" />
@@ -503,7 +492,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="589">
+        <state relative-caret-position="1615">
           <caret line="98" column="12" selection-start-line="98" selection-start-column="12" selection-end-line="98" selection-end-column="12" />
           <folding>
             <element signature="e#0#24#0" expanded="true" />

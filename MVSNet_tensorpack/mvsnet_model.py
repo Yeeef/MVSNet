@@ -97,7 +97,6 @@ class MVSNet(ModelDesc):
             with tf.device('/cpu:0'):
                 add_moving_summary(loss, less_one_acc, less_three_acc)
             
-
             if self.debug_param_summary:
                 with tf.device('/cpu:0'):
                     add_param_summary(
