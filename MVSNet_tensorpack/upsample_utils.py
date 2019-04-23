@@ -31,10 +31,10 @@ def TFBilinearUpSample(x, shape, data_format='NCHW'):
 
 
 @layer_register(log_shape=True)
-def TFNearestUpSample(x, shape, data_format='NCHW'):
-    assert data_format in ['NHWC', 'NCHW']
+def TFNearestUpSample(x, shape, data_format='channels_first'):
+    assert data_format in ['channels_first', 'channels_last']
     assert isinstance(shape, (int, list, tuple, tf.Tensor)), "shape must be an int or a list or a Tensor!"
-    if data_format == 'NCHW':
+    if data_format == 'channels_first':
         x = tf.transpose(x, [0, 2, 3, 1])
 
     if isinstance(shape, int):
@@ -48,7 +48,7 @@ def TFNearestUpSample(x, shape, data_format='NCHW'):
         out_shape = shape.get_shape().as_list()[2:]
     up = tf.image.resize_nearest_neighbor(x, out_shape, align_corners=True)
 
-    if data_format == 'NCHW':
+    if data_format == 'channels_first':
         up = tf.transpose(up, [0, 3, 1, 2])
 
     return up

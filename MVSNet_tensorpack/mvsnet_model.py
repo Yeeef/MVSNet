@@ -1,8 +1,14 @@
 from tensorpack import *
+from tensorpack.utils import logger
 from nn_utils import *
 from loss_utils import *
 from tensorpack.tfutils.summary import (add_moving_summary, add_param_summary, add_tensor_summary)
 from summary_utils import add_image_summary
+import tensorflow as tf
+from DataManager import Cam
+
+""" monkey-patch """
+enable_argscope_for_module(tf.layers)
 
 
 def get_depth_meta(cams):
@@ -12,21 +18,29 @@ def get_depth_meta(cams):
     :return: depth_start, depth_interval
     """
     ref_cam = cams[:, 0]
+    logger.warn('cams shape: {}'.format(cams.get_shape().as_list()))
+    logger.warn('ref_cam shape: {}'.format(ref_cam.get_shape().as_list()))
+    logger.warn('ref_cam type: {}'.format(type(ref_cam)))
+
     batch_size = tf.shape(cams)[0]
-    depth_start = tf.map_fn(lambda cam: cam.depth_min, ref_cam)
-    assert depth_start.get_shape().as_list() == [batch_size]
-    depth_interval = tf.map_fn(lambda cam: cam.depth_interval, ref_cam)
-    assert depth_interval.get_shape().as_list() == [batch_size]
+    depth_start = tf.reshape(
+        tf.slice(ref_cam, [0, 1, 3, 0], [batch_size, 1, 1, 1]), [batch_size])
+    depth_interval = tf.reshape(
+        tf.slice(ref_cam, [0, 1, 3, 1], [batch_size, 1, 1, 1]), [batch_size])
+    # depth_start = tf.map_fn(lambda cam: Cam.get_depth_meta(cam, 'depth_min'), ref_cam)
+    # assert depth_start.get_shape().as_list() == [batch_size]
+    # depth_interval = tf.map_fn(lambda cam: Cam.get_depth_meta(cam, 'depth_interval'), ref_cam)
+    # assert depth_interval.get_shape().as_list() == [batch_size]
 
     return depth_start, depth_interval
 
 
 class MVSNet(ModelDesc):
 
-    height = 513
-    width = 769
+    height = 512
+    width = 640
     view_num = 3
-    data_format = 'NCHW'
+    data_format = 'channels_first'
     lambda_ = 1.
 
     weight_decay = 1.
@@ -46,14 +60,15 @@ class MVSNet(ModelDesc):
     """Learning rate decay rate"""
     decay_rate = 0.9
 
-    def __init__(self, depth_num):
+    def __init__(self, depth_num, is_training):
         super(MVSNet, self).__init__()
+        self.is_training = is_training
         self.depth_num = depth_num
 
     def inputs(self):
         return [
             tf.placeholder(tf.float32, [None, self.view_num, self.height, self.width, 3], 'imgs'),
-            tf.placeholder(tf.float32, [None, self.view_num], 'cams'),
+            tf.placeholder(tf.float32, [None, self.view_num, 2, 4, 4], 'cams'),
             # tf.placeholder(tf.float32, [None, self.height, self.width, 1], 'seg_map'),
             tf.placeholder(tf.float32, [None, self.height, self.width, 1], 'gt_depth'),
         ]
@@ -66,10 +81,10 @@ class MVSNet(ModelDesc):
     def build_graph(self, imgs, cams, gt_depth):
         # preprocess
         imgs, gt_depth = self._preprocess(imgs, gt_depth)
-
         # define a general arg scope first, like data_format
-        with argscope([tf.layers.conv3d, tf.layers.conv3d_transpose, Conv2D, MaxPooling, AvgPooling, BatchNorm],
-                      data_format=self.data_format, padding='same'):
+        with argscope([tf.layers.conv3d, tf.layers.conv3d_transpose, tf.layers.batch_normalization,
+                       Conv2D, MaxPooling, AvgPooling, BatchNorm],
+                      data_format=self.data_format):
             # feature extraction
             # shape: b, view_num, c, h/4, w/4
             feature_maps = feature_extraction_net(imgs)
@@ -80,7 +95,7 @@ class MVSNet(ModelDesc):
 
             # warping layer
             # shape of cost_volume: b, c, depth_num, h/4, w/4
-            cost_volume = warping_layer(feature_maps, cams, depth_start, depth_interval, self.depth_num)
+            cost_volume = warping_layer('warping_layer', feature_maps, cams, depth_start, depth_interval, self.depth_num)
 
             # cost volume regularization
             # shape of probability_volume: b, 1, d, h/4, w/4
@@ -105,7 +120,7 @@ class MVSNet(ModelDesc):
                 with tf.device('/cpu:0'):
                     add_moving_summary(loss, less_one_acc, less_three_acc)
                 add_image_summary(tf.squeeze(coarse_depth, axis=1), name='coarse_depth')
-                add_image_summary(tf.squeeze(refine_depth, axis=1), name='refine_depth')
+                add_image_summary(tf.squeeze(tf.clip_by_value(refine_depth, 0, 255), axis=1), name='refine_depth')
                 add_image_summary(tf.transpose(ref_img, [0, 2, 3, 1]), name='rgb')
                 add_image_summary(tf.transpose(gt_depth, [0, 2, 3, 1]), name='gt_depth')
 

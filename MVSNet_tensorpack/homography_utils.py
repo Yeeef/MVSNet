@@ -6,27 +6,29 @@ def get_homographies(batch_left_cam, batch_right_cam, depth_num, depth_start, de
     batch_size = batch_left_cam.get_shape().as_list()[0]
     with tf.name_scope('get_homographies'):
         # cameras (K, R, t)
-        R_left = tf.map_fn(lambda cam: cam.get_R_and_T()[0], batch_left_cam)
-        t_left = tf.map_fn(lambda cam: cam.get_R_and_T()[1], batch_left_cam)
-
-        R_right = tf.map_fn(lambda cam: cam.get_R_and_T()[0], batch_right_cam)
-        t_right = tf.map_fn(lambda cam: cam.get_R_and_T()[1], batch_right_cam)
-
-        K_left = tf.map_fn(lambda cam: cam.get_K(), batch_left_cam)
-        K_right = tf.map_fn(lambda cam: cam.get_K(), batch_right_cam)
+        R_left = tf.squeeze(tf.slice(batch_left_cam, [0, 0, 0, 0], [-1, 1, 3, 3]), axis=1)
+        R_right = tf.squeeze(tf.slice(batch_right_cam, [0, 0, 0, 0], [-1, 1, 3, 3]), axis=1)
+        t_left = tf.squeeze(tf.slice(batch_left_cam, [0, 0, 0, 3], [-1, 1, 3, 1]), axis=1)
+        t_right = tf.squeeze(tf.slice(batch_right_cam, [0, 0, 0, 3], [-1, 1, 3, 1]), axis=1)
+        K_left = tf.squeeze(tf.slice(batch_left_cam, [0, 1, 0, 0], [-1, 1, 3, 3]), axis=1)
+        K_right = tf.squeeze(tf.slice(batch_right_cam, [0, 1, 0, 0], [-1, 1, 3, 3]), axis=1)
 
         assert R_left.get_shape().as_list() == [batch_size, 3, 3], "R_left's shape: {}". \
             format(R_left.get_shape().as_list())
-        assert t_left.get_shape().as_list() == [batch_size, 3], "t_left's shape: {}". \
+        assert t_left.get_shape().as_list() == [batch_size, 3, 1], "t_left's shape: {}". \
             format(R_left.get_shape().as_list())
         assert K_left.get_shape().as_list() == [batch_size, 3, 3], "K_left's shape: {}". \
             format(K_left.get_shape().as_list())
 
         # depth
-        depth_num = tf.reshape(tf.cast(depth_num, 'int32'), [])
-        depth = depth_start + tf.cast(tf.range(depth_num), tf.float32) * depth_interval
+        batch_size = tf.shape(depth_start)[0]
+        depth_start_mat = tf.tile(tf.reshape(depth_start, (batch_size, 1)), (1, depth_num))
+        depth_interval_mat = tf.tile(tf.reshape(depth_interval, (batch_size, 1)), (1, depth_num))
+        depth_range_mat = tf.tile(tf.reshape(tf.cast(tf.range(depth_num), tf.float32), [1, depth_num]), (batch_size, 1))
+        depth = depth_start_mat + depth_range_mat * depth_interval_mat
+
         # preparation
-        num_depth = tf.shape(depth)[0]
+        num_depth = tf.shape(depth)[1]
         K_left_inv = tf.matrix_inverse(K_left)
         R_left_trans = tf.transpose(R_left, perm=[0, 2, 1])
         R_right_trans = tf.transpose(R_right, perm=[0, 2, 1])

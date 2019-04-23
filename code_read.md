@@ -13,16 +13,18 @@
 也就是说，`moving_mean`, `moving_variance` 的更新需要我们特别注意，官方给的例子是这样的
 
 ```python
-x_norm = tf.layers.batch_normalization(x, training=training)
+ x_norm = tf.layers.batch_normalization(x, training=training)
+
+  # ...
 
 update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-train_op = optimizer.minimize(loss)
-train_op = tf.group([train_op, update_ops])
+with tf.control_dependencies(update_ops):
+    train_op = optimizer.minimize(loss)
 ```
 
 比较重要的参数：
 
-- `epsilon` is 1e-3, in __tf 1.13!!__ (tf 1.12 中默认为 1e-5), __在 MVSNet 源码中，default epsilon is 1e-5__
+- `epsilon` is 1e-3, in __tf 1.13!!__ (tf 1.12 中默认为 1e-3), __在 MVSNet 源码中，default epsilon is 1e-5__
 - `center`:  If True, add offset of `beta` to normalized tensor. If False, `beta` is ignored.
 - `scale`: If True, multiply by `gamma`. If False, `gamma` is not used. When the next layer is linear (also e.g. nn.relu), this can be disabled since the scaling can be done by the next layer.
 - `training`: 默认为 `False`, Whether to return the output in training mode (normalized with statistics of the current batch) or in inference mode (normalized with moving statistics). 也就是 `moving_mean`, `moving_variance` 是否用当前的 batch 的信息，在 inference 中，往往要把 `training` 设为 False, 利用已经训练好的 `moving_mean`, `moving_variance`. 在 train 中，如果我们要利用 pretrained weight, 则也应该把这个参数设为 False, 如果我们要自己重头训练，则要设置为 True, 且如之前所说的把 `update_ops` 加入 `train_op` 中
@@ -35,11 +37,31 @@ train_op = tf.group([train_op, update_ops])
 - `training` == True, `trainable` == False, 这应该算是一个暗坑，在 inference 过程中将不会利用训练好的 moving_mean, moving_variance, 而是直接计算当前 feed forward 的 batch 的相关值
 - `training` == False, `trainable` == True, 一般用于 load pretrained model, 利用之前模型计算好的 moving_mean, moving_variance, 但要特别注意之前模型的 `epsilon` 是否等于默认值，这个值是不会在 pretrained weight 中保存的
 
+特别注意，tensorflow 并没有自动设置 `training` 的机制，所以一定要在 train, val 的时候正确设置 `training`
+
 在 tensorpack 中则有另一套类似，但更加清晰的机制，详见 [tensorpack docs](https://tensorpack.readthedocs.io/modules/models.html#tensorpack.models.BatchRenorm), 需要注意的是，如果 tensorpack 不显式指定 training 参数，则 `training` = `ctx.is_training`, [学长的报告](https://note.youdao.com/group/#/93778363/(full:md/434812763)
 
-至于在 MVSNet 中，应该是默认 training == trainable
+至于在 MVSNet 中，应该是默认 training == self.is_training, 通过 Network 类封装了 is_training 参数，从而实现上述需求
 
-### dataset / augmentation
+## dataset / augmentation
+
+### dtu training set overview
+
+- val set: 3, 5, 17, 21, 28, 35, 37, 38, 40, 43, 56, 59, 66, 67, 82, 86, 106, 117
+- eval set: 1, 4, 9, 10, 11, 12, 13, 15, 23, 24, 29, 32, 33, 34, 48, 49,62, 75, 77, 110, 114, 118
+- train set: other 79 scans
+
+every scan contains 49 images and associated cams
+Considering each scan contains 49 images with 7 different lighting conditions,by setting each image as the reference,DTUdataset provides _27097_ trainingsamples in total.
+
+79 * 7 = 563 组图片，每组49张，每一张都可以作为 ref view, 所以训练集共有 563 * 49 = 27097, 其实还可以扩展的更多，但是他有 view selection 的过程，也就是规定了一个顺序呢
+
+### mydataflow writing
+
+现在这个图片数量很大，不便于一次读入内存，所以 dataflow 要写的更加注意效率一点，我觉得一点点的 yield 必然是很慢的
+
+### notations
+
 
 - `gen_dtu_resized_path` 生成 dtu 数据集的路径，便于之后读取
 - `channels_last`
@@ -62,7 +84,7 @@ DEPTH_MIN DEPTH_INTERVAL (DEPTH_NUM DEPTH_MAX)
 - [ ] depth 的 min, max 是否全局相等？
 - [ ] 如何解决 depth, camera params 的 scale 问题？
 
-#### data preprocess
+### data preprocess
 
 - center_image，细粒度，每一张图片都按照自己的 mean, var 做 normalized
 
@@ -155,6 +177,7 @@ def load_cam(file, interval_scale=1):
 - bn_epsilon is 1e-5
 - 所有卷积层，包括最后一个没有 bn 的，都没有 Biased
 - Bn 的 epsilon 为 1e-5
+  - momentum 默认为 **0.99**, tensorpack 默认为 **0.9**
   - is_training = True
   - 我们需要重头训练，所以不需要把 is_training 设置为 False
   - gamma, beta 并不设有 regularizer
@@ -167,7 +190,7 @@ def load_cam(file, interval_scale=1):
   - last conv layer outputs a 1-channel volume (Probability Volume)
 - retrive depth map estimation from probability volume via _soft argmin_ (expectation, approxiamates argmax to some degree), output depth map is W/4 * H/4 
 - depth map refinement
-- 发现 bug 已经向作者提交 issue
+- **发现 bug 已经向作者提交 issue**
 
 ### cost volume regulariztion
 
@@ -184,11 +207,17 @@ Why are you interested in this programme?
 Is there any particular project (or research topic) done at HKU CS that is of great interest to you?
 What would you like to achieve from this experience?
 
+## input data
+
+### dtu traing set overview
+
+### my dataflow
+
 ## problems
 
 - 各个 gpu 之间共享参数需要显式指定 reuse=True 吗？
 - channel_first 带来的一些副作用，要好好看一遍，尤其是 conv3d 出来的大小
-- 多 gpu 下的 summary 怎么搞
+- [x] 多 gpu 下的 summary 怎么搞: see add_image_summary()
 - 这是害怕 exp 之后溢出？
 ```python
 probability_volume = tf.nn.softmax(
@@ -198,3 +227,44 @@ probability_volume = tf.nn.softmax(
 - 仔细检查是否有其他地方使用了 resize
 - batch norm 是否有 regularizers
 - 他的 regularize 的 \lambda 为1，不知道是不是太大了，本着尽量复现的原则，暂时还是在各层中设置 regularizer，最后再写成 wd_cost 的形式
+- 源代码没有考虑 rgb, bgr 的问题，cv2.imread 默认是 bgr
+- dataflow 中计算 depth_start, depth_end 都少了一个 depth_interval
+- depth 并没有 scale 到 [0, 1] 之间
+- update ops 和 local varible 的区别？
+
+## tensorpack layer wrapping
+
+会改变几个名字，`kernel->W`, `bias->b`, `mean/EMA`, `variance/EMA`
+
+```python
+def rename_tflayer_get_variable():
+    """
+    Rename all :func:`tf.get_variable` with rules that transforms tflayer style to tensorpack style.
+
+    Returns:
+        A context where the variables are renamed.
+
+    Example:
+
+    .. code-block:: python
+
+        with rename_tflayer_get_variable():
+            x = tf.layer.conv2d(input, 3, 3, name='conv0')
+            # variables will be named 'conv0/W', 'conv0/b'
+    """
+    mapping = {
+        'kernel': 'W',
+        'bias': 'b',
+        'moving_mean': 'mean/EMA',
+        'moving_variance': 'variance/EMA',
+    }
+    return rename_get_variable(mapping)
+```
+
+发现 tensorpack 的 batchNorm 不支持 5d-tensor, 首先去看一下源码，再者一定要小心这些不同名字之间的歧义，[related issue](https://github.com/tensorpack/tensorpack/issues/291) batch_norm 确实没有和 `tf.layers.batch_normalization` 保持一致
+
+tensorpack 不会再增加更多而 warpper 层，因为他基本已经将所有层都底层实现都转成了 `tf.layers.*`, 那么问题就来了，`argscope` 这些语法糖怎么用？ [这么用](https://github.com/tensorpack/tensorpack/pull/1017), 但是需要注意的是 `enable_argscope_for_module(tf.layers)` 并不能帮我们把 `kernel` 改为 `W`, 把 `bias` 改为 `b`, `moving_mean'`: `mean/EMA`, `moving_variance`: `variance/EMA`, 这个还需要我们自己去 wrap
+
+并且，tf.layers.batch_normalization 并没有 `data_format` 而只有 `axis`, 也需要我们去 wrap
+
+并且，moving_mean, moving_variance 还需要比较特殊的更新，我晕了，但是 mvsnet 的源码中并没有这么做，也许不用？这个需要打印出来测试一下

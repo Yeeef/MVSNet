@@ -1,27 +1,44 @@
 from tensorpack import *
+from tensorpack.utils import logger
 import argparse
 from mvsnet_model import MVSNet
 import datetime
 from tensorpack.utils.gpu import get_num_gpu
+from dataflow_utils import *
+import multiprocessing
+import os
+import tensorflow as tf
 
 
-def get_data(data_dir, batch, mode):
+def get_data(args, mode):
     assert mode in ['train', 'val', 'test'], 'invalid mode: {}'.format(mode)
-    pass
+
+    ds = DTU(args.data, args.view_num, mode, args.interval_scale, args.max_d)
+    parallel = min(40, multiprocessing.cpu_count() // 2)  # assuming hyperthreading
+    if parallel < 16:
+        logger.warn("DataFlow may become the bottleneck when too few processes are used.")
+    if mode == 'train':
+        ds = PrefetchData(ds, 4, parallel)
+        ds = BatchData(ds, args.batch, remainder=False)
+    else:
+        ds = PrefetchData(ds, 4, parallel)
+        ds = BatchData(ds, args.batch, remainder=True)
+
+    return ds
 
 
 def get_train_conf(model, args):
     nr_tower = max(get_num_gpu(), 1)
     batch = args.batch
     logger.info("Running on {} tower. Batch size per tower: {}".format(nr_tower, batch))
-    ds_train = get_data(args.data, args.batch, 'train')
-    ds_val = get_data(args.data, args.batch, 'val')
+    ds_train = get_data(args, 'train')
+    ds_val = get_data(args, 'val')
     train_size = len(ds_train)
     train_data = StagingInput(
         QueueInput(ds_train)
     )
     val_data = QueueInput(ds_val)
-    steps_per_epoch = train_size // (nr_tower)
+    steps_per_epoch = train_size // nr_tower
     logger.info("train_size={}. steps_per_epoch={}".format(train_size, steps_per_epoch))
     callbacks = [
         ModelSaver(),
@@ -55,7 +72,7 @@ def get_train_conf(model, args):
                          MergeAllSummaries(period=100 if steps_per_epoch > 100 else steps_per_epoch),
                          RunUpdateOps()],
         steps_per_epoch=steps_per_epoch,
-        max_epoch=200,
+        max_epoch=6,
     )
 
 
@@ -66,12 +83,13 @@ def mvsnet_main():
     parser.add_argument('--load', help='load a model for training or evaluation')
     parser.add_argument('--exp_name', help='model ckpt name')
     parser.add_argument('--gpu', help='comma separated list of GPU(s) to use.')
-    parser.add_argument('-m', help='train / val / test', default='train', choices=['train', 'val', 'test'])
+    parser.add_argument('--mode', '-m', help='train / val / test', default='train', choices=['train', 'val', 'test'])
     parser.add_argument('--out', default='./',
                         help='output path for evaluation and test, default to current folder')
     parser.add_argument('--batch', default=2, type=int, help="Batch size per tower.")
     parser.add_argument('--max_d', help='depth num for MVSNet', required=True, type=int)
     parser.add_argument('--interval_scale', required=True, type=float)
+    parser.add_argument('--view_num', required=True, type=int)
 
 
 

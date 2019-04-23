@@ -1,6 +1,8 @@
 from tensorpack import *
 from homography_utils import *
 from upsample_utils import TFBilinearUpSample
+import tensorflow as tf
+
 
 __all__ = ['feature_extraction_net', 'warping_layer', 'cost_volume_regularization', 'soft_argmin', 'depth_refinement',
            ]
@@ -13,20 +15,20 @@ def feature_extraction_branch(img):
     :return: l
     """
     with argscope([Conv2D], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
-                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), paddings='same'), \
-         argscope([BatchNorm], epsilon=1e-5):
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
+         argscope([BatchNorm], epsilon=1e-5, momentum=0.99):
         with tf.variable_scope('feature_extraction_branch', reuse=tf.AUTO_REUSE):
             base_filter = 8
-            l = Conv2D('conv0_0', img, base_filter, 3, 1, activation=BNReLU)
-            l = Conv2D('conv0_1', l, base_filter, 3, 1, activation=BNReLU)
+            l = Conv2D('conv0_0', img, base_filter, 3, strides=1, activation=BNReLU)
+            l = Conv2D('conv0_1', l, base_filter, 3, strides=1, activation=BNReLU)
 
-            l = Conv2D('conv1_0', l, base_filter * 2, 5, 2, activation=BNReLU)
-            l = Conv2D('conv1_1', l, base_filter * 2, 3, 1, activation=BNReLU)
-            l = Conv2D('conv1_2', l, base_filter * 2, 3, 1, activation=BNReLU)
+            l = Conv2D('conv1_0', l, base_filter * 2, 5, strides=2, activation=BNReLU)
+            l = Conv2D('conv1_1', l, base_filter * 2, 3, strides=1, activation=BNReLU)
+            l = Conv2D('conv1_2', l, base_filter * 2, 3, strides=1, activation=BNReLU)
 
-            l = Conv2D('conv2_0', l, base_filter * 4, 5, 2, activation=BNReLU)
-            l = Conv2D('conv2_1', l, base_filter * 4, 3, 1, activation=BNReLU)
-            feature_map = Conv2D('conv2_1', l, base_filter * 4, 3, 1, activation=None)
+            l = Conv2D('conv2_0', l, base_filter * 4, 5, strides=2, activation=BNReLU)
+            l = Conv2D('conv2_1', l, base_filter * 4, 3, strides=1, activation=BNReLU)
+            feature_map = Conv2D('conv2_1', l, base_filter * 4, 3, strides=1, activation=None)
 
     return feature_map
 
@@ -61,7 +63,7 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
     """
 
     _, view_num, c, h, w = feature_maps.get_shape().as_list()
-    _, cam_num = cams.get_shape().as_list()
+    _, cam_num, *_ = cams.get_shape().as_list()
     assert view_num == cam_num, 'view num: {} conflicts with cam num: {}'.format(view_num, cam_num)
 
     # ref image and ref cam
@@ -84,41 +86,42 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
 
 def cost_volume_regularization(cost_volume):
     with argscope([tf.layers.conv3d], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
-                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), paddings='same'), \
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
          argscope([tf.layers.conv3d_transpose], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
-                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), paddings='same'), \
-         argscope([BatchNorm], epsilon=1e-5):
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
+         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99):
         base_filter = 8
         with tf.variable_scope('cost_volume_regularization'):
-            l1_0 = tf.layers.conv3d(cost_volume, base_filter * 2, 3, 2, activation=BNReLU, name='3dconv1_0')
-            skip1_0 = tf.layers.conv3d(l1_0, base_filter * 2, 3, 1, name='3dconv1_1')
-
-            l2_0 = tf.layers.conv3d(l1_0, base_filter * 4, 3, 2, activation=BNReLU, name='3dconv2_0')
-            skip2_0 = tf.layers.conv3d(l2_0, base_filter * 4, 3, 1, name='3dconv2_1')
-
-            l3_0 = tf.layers.conv3d(l2_0, base_filter * 8, 3, 2, activation=BNReLU, name='3dconv3_0')
-
-            l0_1 = tf.layers.conv3d(cost_volume, base_filter, 3, 1, activation=BNReLU, name='3dconv0_1')
-
-            l3_1 = tf.layers.conv3d(l3_0, base_filter * 8, 3, 1, activation=BNReLU, name='3dconv3_1')
-            l4_0 = tf.layers.conv3d_transpose(l3_1, base_filter * 4, 3, 2, activation=BNReLU, name='3dconv4_0')
-
-            l4_1 = tf.add(l4_0, skip2_0, name='3dconv4_1')
-            l5_0 = tf.layers.conv3d_transpose(l4_1, base_filter * 2, 3, 2, activation=BNReLU, name='3dconv5_0')
-
-            l5_1 = tf.add(l5_0, skip1_0, name='3dconv5_1')
-            l6_0 = tf.layers.conv3d_transpose(l5_1, base_filter, 3, 2, name='3dconv6_0')
-
-            l6_1 = tf.add(l6_0, l0_1, name='3dconv6_1')
-
-            # shape of l6_2: b, 1, d, h, w
-            l6_2 = tf.layers.conv3d(l6_1, 1, 3, 1, activation=None, name='3dconv6_2')
-
-            # shape: b, d, h, w
-            regularized_cost_volume = tf.squeeze(l6_2, axis=1, name='regularized_cost_volume')
-            prob_volume = tf.nn.softmax(
-                tf.scalar_mul(-1, regularized_cost_volume), axis=1, name='prob_volume'
-            )
+            with rename_tflayer_get_variable():
+                l1_0 = tf.layers.conv3d(cost_volume, base_filter * 2, 3, strides=2, activation=BNReLU, name='3dconv1_0')
+                skip1_0 = tf.layers.conv3d(l1_0, base_filter * 2, 3, strides=1, activation=BNReLU, name='3dconv1_1')
+                
+                l2_0 = tf.layers.conv3d(l1_0, base_filter * 4, 3, strides=2, activation=BNReLU, name='3dconv2_0')
+                skip2_0 = tf.layers.conv3d(l2_0, base_filter * 4, 3, strides=1, activation=BNReLU, name='3dconv2_1')
+                
+                l3_0 = tf.layers.conv3d(l2_0, base_filter * 8, 3, strides=2, activation=BNReLU, name='3dconv3_0')
+                
+                l0_1 = tf.layers.conv3d(cost_volume, base_filter, 3, strides=1, activation=BNReLU, name='3dconv0_1')
+                
+                l3_1 = tf.layers.conv3d(l3_0, base_filter * 8, 3, strides=1, activation=BNReLU, name='3dconv3_1')
+                l4_0 = tf.layers.conv3d_transpose(l3_1, base_filter * 4, 3, strides=2, activation=BNReLU, name='3dconv4_0')
+                
+                l4_1 = tf.add(l4_0, skip2_0, name='3dconv4_1')
+                l5_0 = tf.layers.conv3d_transpose(l4_1, base_filter * 2, 3, strides=2, activation=BNReLU, name='3dconv5_0')
+                
+                l5_1 = tf.add(l5_0, skip1_0, name='3dconv5_1')
+                l6_0 = tf.layers.conv3d_transpose(l5_1, base_filter, 3, strides=2, name='3dconv6_0')
+                
+                l6_1 = tf.add(l6_0, l0_1, name='3dconv6_1')
+                
+                # shape of l6_2: b, 1, d, h, w
+                l6_2 = tf.layers.conv3d(l6_1, 1, 3, strides=1, activation=None, name='3dconv6_2')
+                
+                # shape: b, d, h, w
+                regularized_cost_volume = tf.squeeze(l6_2, axis=1, name='regularized_cost_volume')
+                prob_volume = tf.nn.softmax(
+                    tf.scalar_mul(-1, regularized_cost_volume), axis=1, name='prob_volume'
+                )
 
     return prob_volume
 
@@ -186,18 +189,47 @@ def depth_refinement_net(coarse_depth, img):
     :return:
     """
     with argscope([Conv2D], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
-                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), paddings='same'), \
-         argscope([BatchNorm], epsilon=1e-5):
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
+         argscope([BatchNorm], epsilon=1e-5, momentum=0.99):
         with tf.variable_scope('depth_refine_net'):
             # shape: b, 4, h, w
             concat_input = tf.concat((img, coarse_depth), axis=1, name='concat_input')
-            l0 = Conv2D('conv0', concat_input, 32, 3, 1, activation=BNReLU)
-            l1 = Conv2D('conv1', l0, 32, 3, 1, activation=BNReLU)
-            l2 = Conv2D('conv2', l1, 32, 3, 1, activation=BNReLU)
-            l3 = Conv2D('conv3', l2, 1, 3, 1, activation=None, use_bias=True)
+            l0 = Conv2D('conv0', concat_input, 32, 3, strides=1, activation=BNReLU)
+            l1 = Conv2D('conv1', l0, 32, 3, strides=1, activation=BNReLU)
+            l2 = Conv2D('conv2', l1, 32, 3, strides=1, activation=BNReLU)
+            l3 = Conv2D('conv3', l2, 1, 3, strides=1, activation=None, use_bias=True)
 
             # shape: b, 1, h, w
             refine_depth = tf.add(coarse_depth, l3, name='refine_depth')
 
     return refine_depth
 
+
+@layer_register(use_scope=None)
+def BatchNorm3D(
+        inputs, axis=None, training=None, momentum=0.99, epsilon=1e-5,
+        center=True, scale=True,
+        beta_initializer=tf.zeros_initializer(),
+        gamma_initializer=tf.ones_initializer(),
+        trainable=True,
+        name=None,
+        reuse=None,
+        renorm=False,
+        renorm_clipping=None,
+        renorm_momentum=0.99,
+        fused=None,
+        virtual_batch_size=None,
+        adjustment=None
+
+):
+    pass
+
+@layer_register(use_scope=None)
+def BNReLU3D(x, name=None):
+    """
+    A shorthand of BatchNormalization + ReLU.
+    """
+    with rename_tflayer_get_variable():
+        x = tf.layers.batch_normalization('bn', x)
+        x = tf.nn.relu(x, name=name)
+    return x

@@ -19,6 +19,7 @@ def get_homographies(left_cam, right_cam, depth_num, depth_start, depth_interval
 
         # depth 
         depth_num = tf.reshape(tf.cast(depth_num, 'int32'), [])
+
         depth = depth_start + tf.cast(tf.range(depth_num), tf.float32) * depth_interval
         # preparation
         num_depth = tf.shape(depth)[0]
