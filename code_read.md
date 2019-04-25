@@ -181,6 +181,7 @@ def load_cam(file, interval_scale=1):
   - is_training = True
   - 我们需要重头训练，所以不需要把 is_training 设置为 False
   - gamma, beta 并不设有 regularizer
+  - fused 参数为 True
 
 ### core part: cost volume construction
 
@@ -216,7 +217,9 @@ What would you like to achieve from this experience?
 ## problems
 
 - 各个 gpu 之间共享参数需要显式指定 reuse=True 吗？
+  - 不需要利用 tensorpack 的 `_ParamServerTrainer` 即可
 - channel_first 带来的一些副作用，要好好看一遍，尤其是 conv3d 出来的大小
+  - 全部改成 channels_last
 - [x] 多 gpu 下的 summary 怎么搞: see add_image_summary()
 - 这是害怕 exp 之后溢出？
 ```python
@@ -225,12 +228,20 @@ probability_volume = tf.nn.softmax(
 ```
 - refine_depth 过程中需要 resize image, 是否需要要把图片 h+1, w+1?
 - 仔细检查是否有其他地方使用了 resize
+  - 应该只有一个地方，且已改为 `TFUpsampleBilinear`
 - batch norm 是否有 regularizers
+  - 没有
 - 他的 regularize 的 \lambda 为1，不知道是不是太大了，本着尽量复现的原则，暂时还是在各层中设置 regularizer，最后再写成 wd_cost 的形式
 - 源代码没有考虑 rgb, bgr 的问题，cv2.imread 默认是 bgr
 - dataflow 中计算 depth_start, depth_end 都少了一个 depth_interval
 - depth 并没有 scale 到 [0, 1] 之间
 - update ops 和 local varible 的区别？
+- 为什么 deeplab v3+ 的图看上去很干净？ inference tower 出现了奇怪的黄色边，要看看怎么回事，很可能是 bn 的 moving_mean 和 moving_var 在 inference 的时候反过来更新 training 了
+  - 强行设置为 False 看看表现
+  - 需要在 bn warp 那里利用 ctx.is_training 进行修改
+- 为什么 conv3d 是 argscope 显示的 log? 看一下官方例子是什么样子的
+  - 官方例子中，也是这样
+- MVSNet 貌似压根就没做 weight decay orz
 
 ## tensorpack layer wrapping
 
@@ -267,4 +278,26 @@ tensorpack 不会再增加更多而 warpper 层，因为他基本已经将所有
 
 并且，tf.layers.batch_normalization 并没有 `data_format` 而只有 `axis`, 也需要我们去 wrap
 
-并且，moving_mean, moving_variance 还需要比较特殊的更新，我晕了，但是 mvsnet 的源码中并没有这么做，也许不用？这个需要打印出来测试一下
+并且，moving_mean, moving_variance 还需要比较特殊的更新？我晕了，但是 mvsnet 的源码中并没有这么做，也许不用？这个需要打印出来测试一下
+tf.layers._ 的 API 会自动把该加的 update_op 加入 `tf.GraphKeys.UPDATE_OPS`，`with control_dependencies` 其实就是保证其中的 op 需要先被执行
+
+- [一篇对于 batch norm 的讲解](https://towardsdatascience.com/batch-normalization-theory-and-how-to-use-it-with-tensorflow-1892ca0173ad) 其中提到，如果不 `control_dependencies` 会出问题
+
+本着复现的原则，先不进行上述操作，在运行中自己也试试能不能
+
+如果直接用 tf.layers.bn 能保证正确的 reuse 吗？ tf.layers._ 的 reuse 含义是什么？
+
+多个 gpu 的 Graph 到底是什么关系？ 
+
+### 现在暂时的解决方案
+
+- 通过 `rename_tflayer_get_variable` 来进行 W,b,moving_mean, moving_variance 的命名
+- 通过 `enable_argscope_for_module(tf.layers)` 来实现 argscope 的使用，同时将 `axis` 设置为1
+- update ops 的问题先放一放
+- reuse 的问题先放一放
+
+### tensorpack BatchNorm 封装
+
+tensorpack 中对 batch_normalization 进行了一些比较好的封装，我们可以借鉴
+
+- `tf.GraphKeys.MODEL_VARIABLES` 的含义 [tf graph keys](https://www.tensorflow.org/api_docs/python/tf/GraphKeys)

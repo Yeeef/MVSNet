@@ -22,6 +22,7 @@ import urllib
 from tensorflow.python.lib.io import file_io
 FLAGS = tf.app.flags.FLAGS
 
+
 def center_image(img):
     """ normalize image input """
     img = img.astype(np.float32)

@@ -11,28 +11,42 @@ from DataManager import Cam
 enable_argscope_for_module(tf.layers)
 
 
-def get_depth_meta(cams):
+def get_depth_meta(cams, depth_num):
     """
 
     :param cams: shape: batch, view_num
     :return: depth_start, depth_interval
     """
-    ref_cam = cams[:, 0]
-    logger.warn('cams shape: {}'.format(cams.get_shape().as_list()))
-    logger.warn('ref_cam shape: {}'.format(ref_cam.get_shape().as_list()))
-    logger.warn('ref_cam type: {}'.format(type(ref_cam)))
+    with tf.variable_scope('depth_meta'):
+        ref_cam = cams[:, 0]
+        logger.warn('cams shape: {}'.format(cams.get_shape().as_list()))
+        logger.warn('ref_cam shape: {}'.format(ref_cam.get_shape().as_list()))
+        logger.warn('ref_cam type: {}'.format(type(ref_cam)))
 
-    batch_size = tf.shape(cams)[0]
-    depth_start = tf.reshape(
-        tf.slice(ref_cam, [0, 1, 3, 0], [batch_size, 1, 1, 1]), [batch_size])
-    depth_interval = tf.reshape(
-        tf.slice(ref_cam, [0, 1, 3, 1], [batch_size, 1, 1, 1]), [batch_size])
-    # depth_start = tf.map_fn(lambda cam: Cam.get_depth_meta(cam, 'depth_min'), ref_cam)
-    # assert depth_start.get_shape().as_list() == [batch_size]
-    # depth_interval = tf.map_fn(lambda cam: Cam.get_depth_meta(cam, 'depth_interval'), ref_cam)
-    # assert depth_interval.get_shape().as_list() == [batch_size]
+        batch_size = tf.shape(cams)[0]
+        depth_start = tf.reshape(
+            tf.slice(ref_cam, [0, 1, 3, 0], [batch_size, 1, 1, 1]), [batch_size], name='depth_start')
+        depth_interval = tf.reshape(
+            tf.slice(ref_cam, [0, 1, 3, 1], [batch_size, 1, 1, 1]), [batch_size], name='depth_interval')
+        depth_end = tf.add(depth_start, (tf.cast(depth_num, tf.float32) - 1) * depth_interval, name='depth_end')
 
-    return depth_start, depth_interval
+        # depth_start = tf.map_fn(lambda cam: Cam.get_depth_meta(cam, 'depth_min'), ref_cam)
+        # assert depth_start.get_shape().as_list() == [batch_size]
+        # depth_interval = tf.map_fn(lambda cam: Cam.get_depth_meta(cam, 'depth_interval'), ref_cam)
+        # assert depth_interval.get_shape().as_list() == [batch_size]
+
+    return depth_start, depth_interval, depth_end
+
+
+def center_image(imgs):
+    """
+
+    :param imgs: shape: b, view_num, h, w, c
+    :return:
+    """
+    assert len(imgs.get_shape().as_list()) == 5
+    moments = tf.nn.moments(tf.cast(imgs, tf.float32), axes=(2, 3), keep_dims=True)
+    return (imgs - moments[0]) / (moments[1] + 1e-7)
 
 
 class MVSNet(ModelDesc):
@@ -60,67 +74,93 @@ class MVSNet(ModelDesc):
     """Learning rate decay rate"""
     decay_rate = 0.9
 
-    def __init__(self, depth_num, is_training):
+    def __init__(self, depth_num, bn_training, bn_trainable, batch_size, branch_function, is_refine):
         super(MVSNet, self).__init__()
-        self.is_training = is_training
+        # self.is_training = is_training
+        self.bn_training = bn_training
+        self.bn_trainable = bn_trainable
         self.depth_num = depth_num
+        self.batch_size = batch_size
+        self.branch_function = branch_function
+        self.is_refine = is_refine
 
     def inputs(self):
         return [
             tf.placeholder(tf.float32, [None, self.view_num, self.height, self.width, 3], 'imgs'),
             tf.placeholder(tf.float32, [None, self.view_num, 2, 4, 4], 'cams'),
             # tf.placeholder(tf.float32, [None, self.height, self.width, 1], 'seg_map'),
-            tf.placeholder(tf.float32, [None, self.height, self.width, 1], 'gt_depth'),
+            tf.placeholder(tf.float32, [None, self.height // 4, self.width // 4, 1], 'gt_depth'),
         ]
 
     def _preprocess(self, imgs, gt_depth):
         # transpose image
-        # center image
-        return tf.transpose(imgs, [0, 1, 4, 2, 3]), tf.transpose(gt_depth, [0, 3, 1, 2])
+        # center image done at dataflow
+        with tf.variable_scope('preprocess'):
+            imgs = center_image(imgs)
+            imgs = tf.transpose(imgs, [0, 1, 4, 2, 3], name='transpose_imgs')
+            gt_depth = tf.transpose(gt_depth, [0, 3, 1, 2], name='transpose_gt_depth')
+            ref_img = imgs[:, 0]
+            ref_img = tf.identity(ref_img, name='ref_img')
+            return imgs, gt_depth, ref_img
 
     def build_graph(self, imgs, cams, gt_depth):
         # preprocess
-        imgs, gt_depth = self._preprocess(imgs, gt_depth)
+        imgs, gt_depth, ref_img = self._preprocess(imgs, gt_depth)
         # define a general arg scope first, like data_format
-        with argscope([tf.layers.conv3d, tf.layers.conv3d_transpose, tf.layers.batch_normalization,
-                       Conv2D, MaxPooling, AvgPooling, BatchNorm],
+        # ctx = get_current_tower_context()
+        # if self.bn_trainable is None:
+        #     self.bn_trainable = ctx.is_training
+        # if self.bn_training is None:
+        #     self.bn_training = ctx.is_training
+        with argscope([tf.layers.conv3d, tf.layers.conv3d_transpose,
+                       Conv2D, Conv2DTranspose, MaxPooling, AvgPooling, BatchNorm],
                       data_format=self.data_format):
             # feature extraction
             # shape: b, view_num, c, h/4, w/4
-            feature_maps = feature_extraction_net(imgs)
+            feature_maps = feature_extraction_net(imgs, self.branch_function)
 
             # get depth_start and depth_interval batch-wise
-            depth_start, depth_interval = get_depth_meta(cams)
-            depth_end = depth_start + (tf.cast(self.depth_num, tf.float32) - 1) * depth_interval
+            depth_start, depth_interval, depth_end = get_depth_meta(cams, depth_num=self.depth_num)
 
             # warping layer
             # shape of cost_volume: b, c, depth_num, h/4, w/4
-            cost_volume = warping_layer('warping_layer', feature_maps, cams, depth_start, depth_interval, self.depth_num)
+            cost_volume = warping_layer('warping', feature_maps, cams, depth_start
+                                        , depth_interval, self.depth_num)
+            # cost_volume = tf.get_variable('fake_cost_volume', (1, 32, 192, 128, 160))
 
             # cost volume regularization
             # shape of probability_volume: b, 1, d, h/4, w/4
-            prob_volume = cost_volume_regularization(cost_volume)
+            prob_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
 
             # shape of coarse_depth: b, 1, h/4, w/4
-            coarse_depth = soft_argmin(prob_volume, depth_start, depth_end, self.depth_num)
+            coarse_depth = soft_argmin('soft_argmin', prob_volume, depth_start, depth_end, self.depth_num, self.batch_size)
 
-            # depth_refinement
-            ref_img = imgs[:, 0]
             # shape of refine_depth: b, 1, h/4, w/4
-            refine_depth = depth_refinement(coarse_depth, ref_img, depth_start, depth_end)
+            if self.is_refine:
+                refine_depth = depth_refinement(coarse_depth, ref_img, depth_start, depth_end)
+                loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval, 'coarse_loss')
+                loss_refine, less_one_acc, less_three_acc = mvsnet_regression_loss(gt_depth, refine_depth,
+                                                                                   depth_interval, 'refine_loss')
+            else:
+                refine_depth = coarse_depth
+                # loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval, 'coarse_loss')
+                loss_refine, less_one_acc, less_three_acc = mvsnet_regression_loss(gt_depth, refine_depth,
+                                                                                   depth_interval, 'refine_loss')
+                loss_coarse = tf.identity(loss_refine, name='coarse_loss')
 
-            loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval)
-            loss_refine, less_one_acc, less_three_acc = mvsnet_regression_loss(gt_depth, refine_depth, depth_interval)
-
-            loss = tf.add(loss_refine, loss_coarse * self.lambda_, name='loss')
+            loss = tf.add(loss_refine / 2, loss_coarse * self.lambda_ / 2, name='loss')
             less_one_acc = tf.identity(less_one_acc, name='less_one_acc')
             less_three_acc = tf.identity(less_three_acc, name='less_three_acc')
 
             with tf.variable_scope('summaries'):
                 with tf.device('/cpu:0'):
-                    add_moving_summary(loss, less_one_acc, less_three_acc)
-                add_image_summary(tf.squeeze(coarse_depth, axis=1), name='coarse_depth')
-                add_image_summary(tf.squeeze(tf.clip_by_value(refine_depth, 0, 255), axis=1), name='refine_depth')
+                    add_moving_summary(loss, loss_coarse, loss_refine, less_one_acc, less_three_acc)
+                # add_image_summary(tf.clip_by_value(tf.transpose(coarse_depth, [0, 2, 3, 1]), 0, 255)
+                #                   , name='coarse_depth')
+                add_image_summary(tf.transpose(coarse_depth, [0, 2, 3, 1])
+                                  , name='coarse_depth')
+                add_image_summary(tf.transpose(refine_depth, [0, 2, 3, 1])
+                                  , name='refine_depth')
                 add_image_summary(tf.transpose(ref_img, [0, 2, 3, 1]), name='rgb')
                 add_image_summary(tf.transpose(gt_depth, [0, 2, 3, 1]), name='gt_depth')
 

@@ -28,15 +28,15 @@ from loss import *
 from homography_warping import get_homographies, homography_warping
 
 # paths
-tf.app.flags.DEFINE_string('dtu_data_root', '/data/dtu/', 
+tf.app.flags.DEFINE_string('dtu_data_root', '/data3/lyf/mvsnet/training_data/dtu_training/',
                            """Path to dtu dataset.""")
-tf.app.flags.DEFINE_string('log_dir', '/data/tf_log',
+tf.app.flags.DEFINE_string('log_dir', '/data3/lyf/author_mvsnet_train_log',
                            """Path to store the log.""")
-tf.app.flags.DEFINE_string('model_dir', '/data/tf_model',
+tf.app.flags.DEFINE_string('model_dir', '/data3/lyf/author_mvsnet_train_mod',
                            """Path to save the model.""")
 tf.app.flags.DEFINE_boolean('train_dtu', True, 
                             """Whether to train.""")
-tf.app.flags.DEFINE_boolean('use_pretrain', True, 
+tf.app.flags.DEFINE_boolean('use_pretrain', False,
                             """Whether to train.""")
 tf.app.flags.DEFINE_integer('ckpt_step', 0,
                             """ckpt step.""")
@@ -63,7 +63,7 @@ tf.app.flags.DEFINE_boolean('refinement', False,
                            """Whether to apply depth map refinement for 3DCNNs""")
 
 # training parameters
-tf.app.flags.DEFINE_integer('num_gpus', 1, 
+tf.app.flags.DEFINE_integer('num_gpus', 2,
                             """Number of GPUs.""")
 tf.app.flags.DEFINE_integer('batch_size', 1, 
                             """Training batch size.""")
@@ -135,6 +135,7 @@ class MVSGenerator:
                     print('Back pass: d_min = %f, d_max = %f.' % \
                         (cams[0][1, 3, 0], cams[0][1, 3, 0] + (FLAGS.max_d - 1) * cams[0][1, 3, 1]))
                     yield (images, cams, depth_image) 
+
 
 def average_gradients(tower_grads):
     """Calculate the average gradient for each shared variable across all towers.
@@ -266,9 +267,17 @@ def train(traning_list):
 
         # summary 
         summaries.append(tf.summary.scalar('loss', loss))
+        summaries.append(tf.summary.scalar('coarse_loss', loss0))
+        summaries.append(tf.summary.scalar('refine_loss', loss1))
         summaries.append(tf.summary.scalar('less_one_accuracy', less_one_accuracy))
         summaries.append(tf.summary.scalar('less_three_accuracy', less_three_accuracy))
         summaries.append(tf.summary.scalar('lr', lr_op))
+        # lyf add image summary
+        summaries.append(tf.summary.image('coarse_depth', depth_map))
+        summaries.append(tf.summary.image('refine_depth', refined_depth_map))
+        summaries.append(tf.summary.image('rgb', images[:, 0]))
+        summaries.append(tf.summary.image('gt_depth', depth_image))
+
         weights_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
         for var in weights_list:
             summaries.append(tf.summary.histogram(var.op.name, var))
@@ -282,10 +291,10 @@ def train(traning_list):
 
         # initialization option
         init_op = tf.global_variables_initializer()
-        config = tf.ConfigProto(allow_soft_placement = True)
+        config = tf.ConfigProto(allow_soft_placement=True)
         config.gpu_options.allow_growth = True
 
-        with tf.Session(config=config) as sess:     
+        with tf.Session(config=config) as sess:
             
             # initialization
             total_step = 0

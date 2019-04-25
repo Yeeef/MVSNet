@@ -1,9 +1,10 @@
 from tensorpack import *
+import tensorflow as tf
 
 
-def mvsnet_regression_loss(gt_depth, pred_depth, depth_interval):
+def mvsnet_regression_loss(gt_depth, pred_depth, depth_interval, scope_name):
 
-    with tf.variable_scope('mvsnet_loss'):
+    with tf.variable_scope(scope_name):
         masked_mae = non_zero_mean_absolute_diff(gt_depth, pred_depth, depth_interval)
 
         less_one_accuracy = less_one_percentage(gt_depth, pred_depth, depth_interval)
@@ -22,7 +23,8 @@ def non_zero_mean_absolute_diff(gt_depth, pred_depth, depth_interval):
     :return:
     """
     with tf.variable_scope('MAE'):
-        batch_size, _, h, w = tf.shape(pred_depth)
+        # *_, h, w = tf.shape(pred_depth)
+        batch_size = tf.shape(pred_depth)[0]
         depth_interval = tf.reshape(depth_interval, [batch_size])
         # we have masked out wrong depth before as 0.
         mask_true = tf.cast(tf.not_equal(gt_depth, 0.0), dtype='float32')
@@ -46,7 +48,8 @@ def less_one_percentage(gt_depth, pred_depth, depth_interval):
     :return:
     """
     with tf.variable_scope('less_one_error'):
-        batch_size, _, h, w = tf.shape(pred_depth)
+        *_, h, w = pred_depth.get_shape().as_list()
+        batch_size = tf.shape(pred_depth)[0]
         mask_true = tf.cast(tf.not_equal(gt_depth, 0.0), dtype='float32')
         # shape: () denom is a scalar
         denom = tf.reduce_sum(mask_true) + 1e-7
@@ -65,7 +68,8 @@ def less_three_percentage(gt_depth, pred_depth, depth_interval):
     :return:
     """
     with tf.variable_scope('less_three_percentage'):
-        batch_size, _, h, w = tf.shape(pred_depth)
+        *_, h, w = pred_depth.get_shape().as_list()
+        batch_size = tf.shape(pred_depth)[0]
         mask_true = tf.cast(tf.not_equal(gt_depth, 0.0), dtype='float32')
         denom = tf.reduce_sum(mask_true) + 1e-7
         interval_image = tf.tile(tf.reshape(depth_interval, [batch_size, 1, 1, 1]), [1, 1, h, w])

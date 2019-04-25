@@ -2,18 +2,20 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="213667f0-d67c-488a-9fa6-2ff0dbd4dd6a" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/MVSNet.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/MVSNet.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/MVSNet_tensorpack/mnist_tflayers.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/MVSNet_tensorpack/not_used.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/DataManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/DataManager.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/MVSNet_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/MVSNet_main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/homography_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/homography_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/loss_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/loss_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/nn_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/nn_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/upsample_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/upsample_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/summary_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/summary_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cnn_wrapper/network.py" beforeDir="false" afterPath="$PROJECT_DIR$/cnn_wrapper/network.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/code_read.md" beforeDir="false" afterPath="$PROJECT_DIR$/code_read.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mvsnet/homography_warping.py" beforeDir="false" afterPath="$PROJECT_DIR$/mvsnet/homography_warping.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mvsnet/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/mvsnet/preprocess.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mvsnet/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/mvsnet/train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -22,39 +24,26 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.10911136">
+    <splitter split-orientation="horizontal" split-proportion="0.68015736">
       <split-first>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/summary_utils.py">
               <provider selected="true" editor-type-id="text-editor">
                 <state relative-caret-position="190">
-                  <caret line="10" column="30" selection-start-line="10" selection-start-column="30" selection-end-line="10" selection-end-column="30" />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/nn_utils.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="550">
-                  <caret line="224" column="8" lean-forward="true" selection-start-line="224" selection-start-column="8" selection-end-line="224" selection-end-column="8" />
+                  <caret line="10" column="50" selection-start-line="10" selection-start-column="50" selection-end-line="10" selection-end-column="50" />
                   <folding>
                     <element signature="e#0#24#0" expanded="true" />
-                    <element signature="e#1379#1736#0" />
-                    <element signature="e#5720#6568#0" />
-                    <element signature="e#6710#7719#0" />
-                    <element signature="e#7885#8112#1" />
                   </folding>
                 </state>
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="false">
+          <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-209">
-                  <caret line="49" column="7" lean-forward="true" selection-start-line="49" selection-start-column="7" selection-end-line="49" selection-end-column="7" />
+                <state relative-caret-position="-247">
+                  <caret line="125" column="39" lean-forward="true" selection-start-line="125" selection-start-column="39" selection-end-line="125" selection-end-column="39" />
                   <folding>
                     <element signature="e#0#24#0" expanded="true" />
                   </folding>
@@ -65,8 +54,50 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/MVSNet_main.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-19">
-                  <caret line="11" selection-start-line="11" selection-end-line="11" />
+                <state relative-caret-position="-1117">
+                  <caret line="37" column="4" selection-start-line="37" selection-start-column="4" selection-end-line="37" selection-end-column="4" />
+                  <folding>
+                    <element signature="e#0#24#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/nn_utils.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="278">
+                  <caret line="312" column="34" selection-start-line="312" selection-start-column="34" selection-end-line="312" selection-end-column="34" />
+                  <folding>
+                    <element signature="e#0#24#0" expanded="true" />
+                    <element signature="e#382#1708#0" />
+                    <element signature="e#1749#2380#0" />
+                    <element signature="e#2514#3584#0" />
+                    <element signature="e#3658#7588#0" />
+                    <element signature="e#7715#8091#0" />
+                    <element signature="e#8220#8606#0" />
+                    <element signature="e#9656#10706#0" />
+                    <element signature="e#10758#11725#0" />
+                    <element signature="e#12453#13396#0" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/not_used.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="133">
+                  <caret line="7" column="25" lean-forward="true" selection-start-line="7" selection-start-column="25" selection-end-line="7" selection-end-column="25" />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/loss_utils.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="947">
+                  <caret line="55" column="77" selection-start-line="55" selection-start-column="77" selection-end-line="55" selection-end-column="77" />
                   <folding>
                     <element signature="e#0#24#0" expanded="true" />
                   </folding>
@@ -77,8 +108,8 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/upsample_utils.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="266">
-                  <caret line="38" lean-forward="true" selection-start-line="38" selection-end-line="38" />
+                <state relative-caret-position="-114">
+                  <caret line="9" column="4" selection-start-line="9" selection-start-column="4" selection-end-line="9" selection-end-column="4" />
                   <folding>
                     <element signature="e#54#77#0" expanded="true" />
                   </folding>
@@ -87,46 +118,10 @@
             </entry>
           </file>
           <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/DataManager.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="551">
-                  <caret line="65" column="30" lean-forward="true" selection-start-line="65" selection-start-column="30" selection-end-line="65" selection-end-column="30" />
-                  <folding>
-                    <element signature="e#0#18#0" expanded="true" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/code_read.md">
-              <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-                <state split_layout="FIRST">
-                  <first_editor relative-caret-position="2450">
-                    <caret line="221" column="9" selection-start-line="221" selection-start-column="9" selection-end-line="221" selection-end-column="9" />
-                  </first_editor>
-                  <second_editor />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/README.md">
-              <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-                <state split_layout="FIRST">
-                  <first_editor relative-caret-position="393">
-                    <caret line="92" selection-start-line="92" selection-end-line="92" />
-                  </first_editor>
-                  <second_editor />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/homography_utils.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="304">
-                  <caret line="16" column="20" lean-forward="true" selection-start-line="16" selection-start-column="20" selection-end-line="16" selection-end-column="20" />
+                <state relative-caret-position="266">
+                  <caret line="14" lean-forward="true" selection-start-line="14" selection-end-line="14" />
                 </state>
               </provider>
             </entry>
@@ -135,11 +130,40 @@
       </split-first>
       <split-second>
         <leaf>
-          <file pinned="false" current-in-tab="true">
+          <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/mvsnet/train.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="247">
-                  <caret line="89" column="44" selection-start-line="89" selection-start-column="44" selection-end-line="89" selection-end-column="44" />
+                <state relative-caret-position="1175">
+                  <caret line="211" column="21" lean-forward="true" selection-start-line="211" selection-start-column="21" selection-end-line="211" selection-end-column="21" />
+                  <folding>
+                    <element signature="e#80#117#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/mvsnet/model.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="415">
+                  <caret line="104" column="24" lean-forward="true" selection-start-line="104" selection-start-column="24" selection-end-line="104" selection-end-column="24" />
+                  <folding>
+                    <element signature="e#82#92#0" expanded="true" />
+                    <element signature="e#373#2790#0" />
+                    <element signature="e#6861#11946#0" />
+                    <element signature="e#12057#15922#0" />
+                    <element signature="e#16097#22582#0" />
+                    <element signature="e#22690#24077#0" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/cnn_wrapper/network.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="-378">
+                  <caret line="207" column="8" selection-start-line="207" selection-start-column="8" selection-end-line="207" selection-end-column="8" />
                 </state>
               </provider>
             </entry>
@@ -147,8 +171,8 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/mvsnet/visualize.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="266">
-                  <caret line="19" column="4" selection-start-line="19" selection-start-column="4" selection-end-line="19" selection-end-column="4" />
+                <state relative-caret-position="120">
+                  <caret line="7" column="10" lean-forward="true" selection-start-line="7" selection-start-column="10" selection-end-line="7" selection-end-column="10" />
                 </state>
               </provider>
             </entry>
@@ -156,10 +180,9 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/mvsnet/preprocess.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-342">
-                  <caret line="89" column="34" selection-start-line="89" selection-start-column="34" selection-end-line="89" selection-end-column="34" />
+                <state relative-caret-position="475">
+                  <caret line="58" column="38" lean-forward="true" selection-start-line="58" selection-start-column="38" selection-end-line="58" selection-end-column="38" />
                   <folding>
-                    <element signature="e#86#123#0" expanded="true" />
                     <element signature="e#645#962#0" />
                     <element signature="e#1005#1177#0" />
                     <element signature="e#1240#1522#0" />
@@ -169,22 +192,10 @@
             </entry>
           </file>
           <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/mvsnet/model.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="1672">
-                  <caret line="119" column="23" lean-forward="true" selection-start-line="119" selection-start-column="23" selection-end-line="119" selection-end-column="23" />
-                  <folding>
-                    <element signature="e#82#92#0" expanded="true" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/cnn_wrapper/mvsnet.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="230">
-                  <caret line="132" lean-forward="true" selection-start-line="132" selection-end-line="132" />
+                <state relative-caret-position="476">
+                  <caret line="106" column="12" selection-start-line="106" selection-start-column="12" selection-end-line="106" selection-end-column="12" />
                 </state>
               </provider>
             </entry>
@@ -192,17 +203,8 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/mvsnet/homography_warping.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="266">
+                <state relative-caret-position="122">
                   <caret line="24" column="19" selection-start-line="24" selection-start-column="19" selection-end-line="24" selection-end-column="19" />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/cnn_wrapper/network.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-1848">
-                  <caret line="55" column="32" lean-forward="true" selection-start-line="55" selection-start-column="32" selection-end-line="55" selection-end-column="32" />
                 </state>
               </provider>
             </entry>
@@ -210,17 +212,17 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/mvsnet/loss.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="266">
-                  <caret line="53" column="34" selection-start-line="53" selection-start-column="34" selection-end-line="53" selection-end-column="34" />
+                <state relative-caret-position="-30">
+                  <caret column="21" lean-forward="true" selection-start-column="21" selection-end-column="21" />
                 </state>
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="false">
+          <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-342">
-                  <caret line="21" column="16" selection-start-line="21" selection-start-column="16" selection-end-line="21" selection-end-column="16" />
+                <state relative-caret-position="2242">
+                  <caret line="118" column="77" lean-forward="true" selection-start-line="118" selection-start-column="77" selection-end-line="118" selection-end-column="77" />
                   <folding>
                     <element signature="e#57#66#0" expanded="true" />
                   </folding>
@@ -242,16 +244,28 @@
   <component name="FindInProjectRecents">
     <findStrings>
       <find>layer</find>
-      <find>conv_bn</find>
       <find>average_gradients</find>
       <find>sample_list</find>
       <find>feed</find>
       <find>less_one_temp</find>
       <find>interval_scale</find>
       <find>self.interval_scale</find>
-      <find>mas</find>
       <find>max_w</find>
       <find>file_io</find>
+      <find>concat</find>
+      <find>opt</find>
+      <find>Staging</find>
+      <find>conv_bn</find>
+      <find>mas</find>
+      <find>mask</find>
+      <find>prob_map</find>
+      <find>pyfunc</find>
+      <find>py</find>
+      <find>inference</find>
+      <find>conv9_0</find>
+      <find>gn</find>
+      <find>conv_gn</find>
+      <find>variable_scope</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -260,24 +274,26 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/cnn_wrapper/network.py" />
         <option value="$PROJECT_DIR$/cnn_wrapper/mvsnet.py" />
-        <option value="$PROJECT_DIR$/mvsnet/preprocess.py" />
         <option value="$PROJECT_DIR$/mvsnet/loss.py" />
         <option value="$PROJECT_DIR$/mvsnet/model.py" />
-        <option value="$PROJECT_DIR$/MVSNet_tensorpack/loss_utils.py" />
-        <option value="$PROJECT_DIR$/MVSNet_tensorpack/summary_utils.py" />
-        <option value="$PROJECT_DIR$/mvsnet/train.py" />
         <option value="$PROJECT_DIR$/mvsnet/homography_warping.py" />
         <option value="$PROJECT_DIR$/code_read.md" />
         <option value="$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_main.py" />
-        <option value="$PROJECT_DIR$/MVSNet_tensorpack/MVSNet_main.py" />
-        <option value="$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py" />
         <option value="$PROJECT_DIR$/MVSNet_tensorpack/DataManager.py" />
         <option value="$PROJECT_DIR$/MVSNet_tensorpack/homography_utils.py" />
         <option value="$PROJECT_DIR$/MVSNet_tensorpack/upsample_utils.py" />
-        <option value="$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py" />
+        <option value="$PROJECT_DIR$/mvsnet/preprocess.py" />
+        <option value="$PROJECT_DIR$/MVSNet_tensorpack/loss_utils.py" />
+        <option value="$PROJECT_DIR$/MVSNet_tensorpack/mnist_tflayers.py" />
+        <option value="$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py" />
+        <option value="$PROJECT_DIR$/MVSNet_tensorpack/summary_utils.py" />
+        <option value="$PROJECT_DIR$/MVSNet_tensorpack/not_used.py" />
+        <option value="$PROJECT_DIR$/mvsnet/train.py" />
+        <option value="$PROJECT_DIR$/cnn_wrapper/network.py" />
+        <option value="$PROJECT_DIR$/MVSNet_tensorpack/MVSNet_main.py" />
         <option value="$PROJECT_DIR$/MVSNet_tensorpack/nn_utils.py" />
+        <option value="$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py" />
       </list>
     </option>
   </component>
@@ -387,14 +403,14 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="87932000" />
+    <option name="totallyTimeSpent" value="144595000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="65" y="-4" width="1855" height="1084" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.016583748" />
-      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.49943504" visible="true" weight="0.17578773" />
+      <window_info id="Structure" order="1" sideWeight="0.500565" side_tool="true" weight="0.036484245" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
@@ -408,7 +424,7 @@
       <window_info anchor="bottom" id="Database Changes" order="9" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
       <window_info anchor="bottom" id="Terminal" order="11" />
-      <window_info active="true" anchor="bottom" id="Python Console" order="12" visible="true" weight="0.062181447" />
+      <window_info anchor="bottom" id="Python Console" order="12" visible="true" weight="0.15392457" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -426,20 +442,6 @@
     <entry file="file://$PROJECT_DIR$/cnn_wrapper/__init__.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/loss_utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="646">
-          <caret line="34" column="72" selection-start-line="34" selection-start-column="72" selection-end-line="34" selection-end-column="72" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/mvsnet/loss.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="266">
-          <caret line="53" column="34" selection-start-line="53" selection-start-column="34" selection-end-line="53" selection-end-column="34" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/README.md">
       <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
         <state split_layout="FIRST">
@@ -453,8 +455,8 @@
     <entry file="file://$PROJECT_DIR$/code_read.md">
       <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
         <state split_layout="FIRST">
-          <first_editor relative-caret-position="2450">
-            <caret line="221" column="9" selection-start-line="221" selection-start-column="9" selection-end-line="221" selection-end-column="9" />
+          <first_editor relative-caret-position="2507">
+            <caret line="224" column="9" selection-start-line="224" selection-start-column="9" selection-end-line="224" selection-end-column="9" />
           </first_editor>
           <second_editor />
         </state>
@@ -467,50 +469,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/mvsnet/visualize.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="266">
-          <caret line="19" column="4" selection-start-line="19" selection-start-column="4" selection-end-line="19" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/DataManager.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="551">
-          <caret line="65" column="30" lean-forward="true" selection-start-line="65" selection-start-column="30" selection-end-line="65" selection-end-column="30" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/homography_utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="304">
-          <caret line="16" column="20" lean-forward="true" selection-start-line="16" selection-start-column="20" selection-end-line="16" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/upsample_utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="266">
-          <caret line="38" lean-forward="true" selection-start-line="38" selection-end-line="38" />
-          <folding>
-            <element signature="e#54#77#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/MVSNet_main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-19">
-          <caret line="11" selection-start-line="11" selection-end-line="11" />
-          <folding>
-            <element signature="e#0#24#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/anaconda3/envs/tf/lib/python3.6/site-packages/tensorflow/python/layers/normalization.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2379">
@@ -518,74 +476,79 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/summary_utils.py">
+    <entry file="file://$USER_HOME$/.PyCharm2019.1/system/python_stubs/1519031893/cv2/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="330">
+          <caret line="10591" column="4" selection-start-line="10591" selection-start-column="4" selection-end-line="10591" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/DataManager.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="190">
-          <caret line="10" column="30" selection-start-line="10" selection-start-column="30" selection-end-line="10" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-209">
-          <caret line="49" column="7" lean-forward="true" selection-start-line="49" selection-start-column="7" selection-end-line="49" selection-end-column="7" />
+          <caret line="10" column="33" lean-forward="true" selection-start-line="10" selection-start-column="33" selection-end-line="10" selection-end-column="33" />
           <folding>
-            <element signature="e#0#24#0" expanded="true" />
+            <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/cnn_wrapper/network.py">
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/upsample_utils.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1848">
-          <caret line="55" column="32" lean-forward="true" selection-start-line="55" selection-start-column="32" selection-end-line="55" selection-end-column="32" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/nn_utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="550">
-          <caret line="224" column="8" lean-forward="true" selection-start-line="224" selection-start-column="8" selection-end-line="224" selection-end-column="8" />
+        <state relative-caret-position="-114">
+          <caret line="9" column="4" selection-start-line="9" selection-start-column="4" selection-end-line="9" selection-end-column="4" />
           <folding>
-            <element signature="e#0#24#0" expanded="true" />
-            <element signature="e#1379#1736#0" />
-            <element signature="e#5720#6568#0" />
-            <element signature="e#6710#7719#0" />
-            <element signature="e#7885#8112#1" />
+            <element signature="e#54#77#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/cnn_wrapper/mvsnet.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="230">
-          <caret line="132" lean-forward="true" selection-start-line="132" selection-end-line="132" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/mvsnet/homography_warping.py">
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/homography_utils.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="266">
-          <caret line="24" column="19" selection-start-line="24" selection-start-column="19" selection-end-line="24" selection-end-column="19" />
+          <caret line="14" lean-forward="true" selection-start-line="14" selection-end-line="14" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/mvsnet/model.py">
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/mnist_tflayers.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1672">
-          <caret line="119" column="23" lean-forward="true" selection-start-line="119" selection-start-column="23" selection-end-line="119" selection-end-column="23" />
+        <state relative-caret-position="1216">
+          <caret line="67" column="24" selection-start-line="67" selection-start-column="24" selection-end-line="67" selection-end-column="24" />
           <folding>
-            <element signature="e#82#92#0" expanded="true" />
+            <element signature="e#73#96#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/loss_utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="947">
+          <caret line="55" column="77" selection-start-line="55" selection-start-column="77" selection-end-line="55" selection-end-column="77" />
+          <folding>
+            <element signature="e#0#24#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/not_used.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="133">
+          <caret line="7" column="25" lean-forward="true" selection-start-line="7" selection-start-column="25" selection-end-line="7" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/anaconda3/envs/tf/lib/python3.6/site-packages/tensorflow/python/client/session.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2787">
+          <caret line="309" selection-start-line="309" selection-end-line="309" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/mvsnet/preprocess.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-342">
-          <caret line="89" column="34" selection-start-line="89" selection-start-column="34" selection-end-line="89" selection-end-column="34" />
+        <state relative-caret-position="475">
+          <caret line="58" column="38" lean-forward="true" selection-start-line="58" selection-start-column="38" selection-end-line="58" selection-end-column="38" />
           <folding>
-            <element signature="e#86#123#0" expanded="true" />
             <element signature="e#645#962#0" />
             <element signature="e#1005#1177#0" />
             <element signature="e#1240#1522#0" />
@@ -593,20 +556,129 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py">
+    <entry file="file://$PROJECT_DIR$/mvsnet/homography_warping.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-342">
-          <caret line="21" column="16" selection-start-line="21" selection-start-column="16" selection-end-line="21" selection-end-column="16" />
-          <folding>
-            <element signature="e#57#66#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="122">
+          <caret line="24" column="19" selection-start-line="24" selection-start-column="19" selection-end-line="24" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mvsnet/loss.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-30">
+          <caret column="21" lean-forward="true" selection-start-column="21" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/anaconda3/envs/tf/lib/python3.6/site-packages/tensorpack/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="304">
+          <caret line="19" column="36" lean-forward="true" selection-start-line="19" selection-start-column="36" selection-end-line="19" selection-end-column="36" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/mvsnet/train.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="247">
-          <caret line="89" column="44" selection-start-line="89" selection-start-column="44" selection-end-line="89" selection-end-column="44" />
+        <state relative-caret-position="1175">
+          <caret line="211" column="21" lean-forward="true" selection-start-line="211" selection-start-column="21" selection-end-line="211" selection-end-column="21" />
+          <folding>
+            <element signature="e#80#117#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mvsnet/visualize.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="120">
+          <caret line="7" column="10" lean-forward="true" selection-start-line="7" selection-start-column="10" selection-end-line="7" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mvsnet/model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="415">
+          <caret line="104" column="24" lean-forward="true" selection-start-line="104" selection-start-column="24" selection-end-line="104" selection-end-column="24" />
+          <folding>
+            <element signature="e#82#92#0" expanded="true" />
+            <element signature="e#373#2790#0" />
+            <element signature="e#6861#11946#0" />
+            <element signature="e#12057#15922#0" />
+            <element signature="e#16097#22582#0" />
+            <element signature="e#22690#24077#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/cnn_wrapper/mvsnet.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="476">
+          <caret line="106" column="12" selection-start-line="106" selection-start-column="12" selection-end-line="106" selection-end-column="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/cnn_wrapper/network.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-378">
+          <caret line="207" column="8" selection-start-line="207" selection-start-column="8" selection-end-line="207" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/summary_utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="190">
+          <caret line="10" column="50" selection-start-line="10" selection-start-column="50" selection-end-line="10" selection-end-column="50" />
+          <folding>
+            <element signature="e#0#24#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/MVSNet_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1117">
+          <caret line="37" column="4" selection-start-line="37" selection-start-column="4" selection-end-line="37" selection-end-column="4" />
+          <folding>
+            <element signature="e#0#24#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/nn_utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="278">
+          <caret line="312" column="34" selection-start-line="312" selection-start-column="34" selection-end-line="312" selection-end-column="34" />
+          <folding>
+            <element signature="e#0#24#0" expanded="true" />
+            <element signature="e#382#1708#0" />
+            <element signature="e#1749#2380#0" />
+            <element signature="e#2514#3584#0" />
+            <element signature="e#3658#7588#0" />
+            <element signature="e#7715#8091#0" />
+            <element signature="e#8220#8606#0" />
+            <element signature="e#9656#10706#0" />
+            <element signature="e#10758#11725#0" />
+            <element signature="e#12453#13396#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/mvsnet_model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-247">
+          <caret line="125" column="39" lean-forward="true" selection-start-line="125" selection-start-column="39" selection-end-line="125" selection-end-column="39" />
+          <folding>
+            <element signature="e#0#24#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2242">
+          <caret line="118" column="77" lean-forward="true" selection-start-line="118" selection-start-column="77" selection-end-line="118" selection-end-column="77" />
+          <folding>
+            <element signature="e#57#66#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

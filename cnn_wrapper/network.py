@@ -60,6 +60,7 @@ class Network(object):
         # If true, the resulting variables are set as trainable
         self.trainable = is_training if isinstance(is_training, bool) else True
         # If true, variables are shared between feature towers
+        # self.reuse = False
         self.reuse = reuse
         # If true, layers like batch normalization or dropout are working in training mode
         self.training = is_training

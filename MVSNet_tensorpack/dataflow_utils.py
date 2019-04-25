@@ -7,8 +7,17 @@ import numpy as np
 from tensorpack import *
 from DataManager import (Cam, PFMReader, mask_depth_image)
 import cv2
+from tensorpack.utils import logger
 
 __all__ = ['DTU']
+
+
+def center_image(img):
+    """ normalize image input """
+    img = img.astype(np.float32)
+    var = np.var(img, axis=(0, 1), keepdims=True)
+    mean = np.mean(img, axis=(0, 1), keepdims=True)
+    return (img - mean) / (np.sqrt(var) + 0.00000001)
 
 
 class DTU(RNGDataFlow):
@@ -36,15 +45,16 @@ class DTU(RNGDataFlow):
             shuffle = (train_or_val == 'train')
         self.shuffle = shuffle
         self.view_num = view_num
-        self.sample_list = gen_dtu_resized_path(dtu_data_root, view_num, train_or_val)
+        self.sample_list, self.len_data = gen_dtu_resized_path(dtu_data_root, view_num, train_or_val)
         self.count = 0
 
     def __len__(self):
         # // TODO: check if it is true
-        if self.is_train:
-            return 27097
-        else:
-            return 882
+        return self.len_data
+        # if self.is_train:
+        #     return 27097
+        # else:
+        #     return 882
 
     def __iter__(self):
         for data in self.sample_list:
@@ -52,7 +62,8 @@ class DTU(RNGDataFlow):
             cams = []
             for view in range(self.view_num):
                 # read_image
-                # // TODO: center image is left to augmentor or tf Graph
+                # // [fixedTODO]: center image is left to augmentor or tf Graph
+                # // I have done it here
                 img = cv2.imread(data[2 * view])
                 # load cam and do basic interval_scale
                 cam = Cam(data[2 * view + 1], max_d=self.max_d)
@@ -102,7 +113,11 @@ def gen_dtu_resized_path(dtu_data_folder, view_num, mode='train'):
                     74, 76, 83, 84, 85, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100,
                     101, 102, 103, 104, 105, 107, 108, 109, 111, 112, 113, 115, 116, 119, 120,
                     121, 122, 123, 124, 125, 126, 127, 128]
+    training_set = training_set[:]
     validation_set = [3, 5, 17, 21, 28, 35, 37, 38, 40, 43, 56, 59, 66, 67, 82, 86, 106, 117]
+    validation_set = validation_set[:1]
+    logger.warn('num of scans in training_set: {}'.format(len(training_set)))
+    logger.warn('num of scans in val_set: {}'.format(len(validation_set)))
 
     data_set = []
     if mode == 'train':
@@ -167,7 +182,7 @@ def gen_dtu_resized_path(dtu_data_folder, view_num, mode='train'):
                 paths.append(depth_image_path)
                 sample_list.append(paths)
 
-    return sample_list
+    return sample_list, len(data_set) * 343
 
 
 if __name__ == "__main__":
@@ -176,7 +191,7 @@ if __name__ == "__main__":
     # ds_val = GlassData('../data', 'val')
     # print(len(ds_val)) # 24
     import multiprocessing
-    DTU_DATA_ROOT = '/home/yeeef/Desktop/mvsnet/training_data/dtu_training'
+    DTU_DATA_ROOT = '/home/yeeef/Desktop/dtu_training'
     """dataflow testing"""
     ds = DTU(DTU_DATA_ROOT, 3, 'train', 1.06, 192)
     parallel = min(40, multiprocessing.cpu_count() // 2)  # assuming hyperthreading
@@ -187,10 +202,11 @@ if __name__ == "__main__":
     #       ds, nr_thread=parallel,
     #       map_func=lambda dp: dp,
     #       buffer_size=1000)
-    ds = PrefetchData(ds, 4, 16)
-    ds = BatchData(ds, 1)
+    # ds = PrefetchData(ds, 4, 16)
+
+    ds = PrefetchDataZMQ(ds, nr_proc=16)
+    ds = BatchData(ds, 2)
     # ds = PrintData(ds)
-    # ds = PrefetchDataZMQ(ds, nr_proc=1)
-    
+
     # 160it/s
     TestDataSpeed(ds).start()
