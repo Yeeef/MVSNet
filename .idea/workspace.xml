@@ -307,35 +307,7 @@
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
-    <panes>
-      <pane id="Scope" />
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="MVSNet" type="b2602c69:ProjectViewProjectNode" />
-              <item name="MVSNet" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="MVSNet" type="b2602c69:ProjectViewProjectNode" />
-              <item name="MVSNet" type="462c0819:PsiDirectoryNode" />
-              <item name="cnn_wrapper" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="MVSNet" type="b2602c69:ProjectViewProjectNode" />
-              <item name="MVSNet" type="462c0819:PsiDirectoryNode" />
-              <item name="mvsnet" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="MVSNet" type="b2602c69:ProjectViewProjectNode" />
-              <item name="MVSNet" type="462c0819:PsiDirectoryNode" />
-              <item name="MVSNet_tensorpack" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
-    </panes>
+    <panes />
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
@@ -398,7 +370,8 @@
       <updated>1555382030625</updated>
       <workItem from="1555382034885" duration="13637000" />
       <workItem from="1555653861353" duration="42213000" />
-      <workItem from="1555814063228" duration="3525000" />
+      <workItem from="1555814063228" duration="4566000" />
+      <workItem from="1555859170064" duration="18000" />
     </task>
     <servers />
   </component>
