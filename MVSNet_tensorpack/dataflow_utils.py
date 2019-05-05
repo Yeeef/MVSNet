@@ -65,6 +65,7 @@ class DTU(RNGDataFlow):
                 # // [fixedTODO]: center image is left to augmentor or tf Graph
                 # // I have done it here
                 img = cv2.imread(data[2 * view])
+                # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 # load cam and do basic interval_scale
                 cam = Cam(data[2 * view + 1], max_d=self.max_d)
                 cam.depth_interval = cam.depth_interval * self.interval_scale
@@ -185,6 +186,9 @@ def gen_dtu_resized_path(dtu_data_folder, view_num, mode='train'):
     return sample_list, len(data_set) * 343
 
 
+from matplotlib import pyplot as plt
+
+
 if __name__ == "__main__":
     # ds = GlassData('../data', 'train')
     # print(len(ds)) # 1200
@@ -194,19 +198,36 @@ if __name__ == "__main__":
     DTU_DATA_ROOT = '/home/yeeef/Desktop/dtu_training'
     """dataflow testing"""
     ds = DTU(DTU_DATA_ROOT, 3, 'train', 1.06, 192)
-    parallel = min(40, multiprocessing.cpu_count() // 2)  # assuming hyperthreading
-    # if parallel < 16:
-    #     logger.warn("DataFlow may become the bottleneck when too few processes are used.")
-    print(parallel)
-    # ds1 = MultiThreadMapData(
-    #       ds, nr_thread=parallel,
-    #       map_func=lambda dp: dp,
-    #       buffer_size=1000)
-    # ds = PrefetchData(ds, 4, 16)
-
-    ds = PrefetchDataZMQ(ds, nr_proc=16)
-    ds = BatchData(ds, 2)
+    count = 0
+    for imgs, cams, depth_image in ds:
+        # print(point)
+        if count > 400:
+            plt.figure()
+            # print(imgs[0].shape)
+            
+            plt.subplot(1, 3, 1)
+            plt.imshow(imgs[0].astype('uint8'))
+            plt.subplot(1, 3, 2)
+            plt.imshow(imgs[1].astype('uint8'))
+            plt.subplot(1, 3, 3)
+            plt.imshow(imgs[2].astype('uint8'))
+        count += 1
+        if count >= 410:
+            break
+    plt.show()
+    # parallel = min(40, multiprocessing.cpu_count() // 2)  # assuming hyperthreading
+    # # if parallel < 16:
+    # #     logger.warn("DataFlow may become the bottleneck when too few processes are used.")
+    # print(parallel)
+    # # ds1 = MultiThreadMapData(
+    # #       ds, nr_thread=parallel,
+    # #       map_func=lambda dp: dp,
+    # #       buffer_size=1000)
+    # # ds = PrefetchData(ds, 4, 16)
+    #
+    # ds = PrefetchDataZMQ(ds, nr_proc=16)
+    # ds = BatchData(ds, 2)
     # ds = PrintData(ds)
 
     # 160it/s
-    TestDataSpeed(ds).start()
+    # TestDataSpeed(ds).start()

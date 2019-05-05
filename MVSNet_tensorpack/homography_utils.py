@@ -1,7 +1,66 @@
 import tensorflow as tf
 
 
-def get_homographies(batch_left_cam, batch_right_cam, depth_num, depth_start, depth_interval):
+def get_propability_map(cv, depth_map, depth_start, depth_interval):
+    """ get probability map from cost volume
+    :param cv: shape: b, d, h, w
+    :param depth_map: shape: b, 1, h, w
+    :return prob_map: shape: b, h, w, 1
+    """
+    depth_map = tf.transpose(depth_map, [0, 2, 3, 1])
+
+    def _repeat_(x, num_repeats):
+        """ repeat each element num_repeats times """
+        x = tf.reshape(x, [-1])
+        ones = tf.ones((1, num_repeats), dtype='int32')
+        x = tf.reshape(x, shape=(-1, 1))
+        x = tf.matmul(x, ones)
+        return tf.reshape(x, [-1])
+
+    shape = tf.shape(depth_map)
+    batch_size = shape[0]
+    height = shape[1]
+    width = shape[2]
+    depth = tf.shape(cv)[1]
+
+    # byx coordinate, batched & flattened
+    b_coordinates = tf.range(batch_size)
+    y_coordinates = tf.range(height)
+    x_coordinates = tf.range(width)
+    b_coordinates, y_coordinates, x_coordinates = tf.meshgrid(b_coordinates, y_coordinates, x_coordinates)
+    b_coordinates = _repeat_(b_coordinates, batch_size)
+    y_coordinates = _repeat_(y_coordinates, batch_size)
+    x_coordinates = _repeat_(x_coordinates, batch_size)
+
+    # d coordinate (floored and ceiled), batched & flattened
+    d_coordinates = tf.reshape((depth_map - depth_start) / depth_interval, [-1])
+    d_coordinates_left0 = tf.clip_by_value(tf.cast(tf.floor(d_coordinates), 'int32'), 0, depth - 1)
+    d_coordinates_left1 = tf.clip_by_value(d_coordinates_left0 - 1, 0, depth - 1)
+    d_coordinates1_right0 = tf.clip_by_value(tf.cast(tf.ceil(d_coordinates), 'int32'), 0, depth - 1)
+    d_coordinates1_right1 = tf.clip_by_value(d_coordinates1_right0 + 1, 0, depth - 1)
+
+    # voxel coordinates
+    voxel_coordinates_left0 = tf.stack(
+        [b_coordinates, d_coordinates_left0, y_coordinates, x_coordinates], axis=1)
+    voxel_coordinates_left1 = tf.stack(
+        [b_coordinates, d_coordinates_left1, y_coordinates, x_coordinates], axis=1)
+    voxel_coordinates_right0 = tf.stack(
+        [b_coordinates, d_coordinates1_right0, y_coordinates, x_coordinates], axis=1)
+    voxel_coordinates_right1 = tf.stack(
+        [b_coordinates, d_coordinates1_right1, y_coordinates, x_coordinates], axis=1)
+
+    # get probability image by gathering and interpolation
+    prob_map_left0 = tf.gather_nd(cv, voxel_coordinates_left0)
+    prob_map_left1 = tf.gather_nd(cv, voxel_coordinates_left1)
+    prob_map_right0 = tf.gather_nd(cv, voxel_coordinates_right0)
+    prob_map_right1 = tf.gather_nd(cv, voxel_coordinates_right1)
+    prob_map = prob_map_left0 + prob_map_left1 + prob_map_right0 + prob_map_right1
+    prob_map = tf.reshape(prob_map, [batch_size, height, width, 1])
+
+    return prob_map
+
+
+def get_homographies_yeeef(batch_left_cam, batch_right_cam, depth_num, depth_start, depth_interval):
     # shape of left_cam and right_cam: (b, )
     batch_size = batch_left_cam.get_shape().as_list()[0]
     with tf.name_scope('get_homographies'):
@@ -63,6 +122,50 @@ def get_homographies(batch_left_cam, batch_right_cam, depth_num, depth_start, de
                 middle_mat2
             )
         )
+
+    return homographies
+
+
+def get_homographies(left_cam, right_cam, depth_num, depth_start, depth_interval):
+    with tf.name_scope('get_homographies'):
+        # cameras (K, R, t)
+        R_left = tf.slice(left_cam, [0, 0, 0, 0], [-1, 1, 3, 3])
+        R_right = tf.slice(right_cam, [0, 0, 0, 0], [-1, 1, 3, 3])
+        t_left = tf.slice(left_cam, [0, 0, 0, 3], [-1, 1, 3, 1])
+        t_right = tf.slice(right_cam, [0, 0, 0, 3], [-1, 1, 3, 1])
+        K_left = tf.slice(left_cam, [0, 1, 0, 0], [-1, 1, 3, 3])
+        K_right = tf.slice(right_cam, [0, 1, 0, 0], [-1, 1, 3, 3])
+
+        # depth
+        depth_num = tf.reshape(tf.cast(depth_num, 'int32'), [])
+
+        depth = depth_start + tf.cast(tf.range(depth_num), tf.float32) * depth_interval
+        # preparation
+        num_depth = tf.shape(depth)[0]
+        K_left_inv = tf.matrix_inverse(tf.squeeze(K_left, axis=1))
+        R_left_trans = tf.transpose(tf.squeeze(R_left, axis=1), perm=[0, 2, 1])
+        R_right_trans = tf.transpose(tf.squeeze(R_right, axis=1), perm=[0, 2, 1])
+
+        fronto_direction = tf.slice(tf.squeeze(R_left, axis=1), [0, 2, 0], [-1, 1, 3])          # (B, D, 1, 3)
+
+        c_left = -tf.matmul(R_left_trans, tf.squeeze(t_left, axis=1))
+        c_right = -tf.matmul(R_right_trans, tf.squeeze(t_right, axis=1))                        # (B, D, 3, 1)
+        c_relative = tf.subtract(c_right, c_left)
+
+        # compute
+        batch_size = tf.shape(R_left)[0]
+        temp_vec = tf.matmul(c_relative, fronto_direction)
+        depth_mat = tf.tile(tf.reshape(depth, [batch_size, num_depth, 1, 1]), [1, 1, 3, 3])
+
+        temp_vec = tf.tile(tf.expand_dims(temp_vec, axis=1), [1, num_depth, 1, 1])
+
+        middle_mat0 = tf.eye(3, batch_shape=[batch_size, num_depth]) - temp_vec / depth_mat
+        middle_mat1 = tf.tile(tf.expand_dims(tf.matmul(R_left_trans, K_left_inv), axis=1), [1, num_depth, 1, 1])
+        middle_mat2 = tf.matmul(middle_mat0, middle_mat1)
+
+        homographies = tf.matmul(tf.tile(K_right, [1, num_depth, 1, 1])
+                     , tf.matmul(tf.tile(R_right, [1, num_depth, 1, 1])
+                     , middle_mat2))
 
     return homographies
 

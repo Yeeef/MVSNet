@@ -57,17 +57,17 @@ tf.app.flags.DEFINE_float('interval_scale', 1.06,
                             """Downsample scale for building cost volume.""")
 
 # network architectures
-tf.app.flags.DEFINE_string('regularization', 'GRU',
+tf.app.flags.DEFINE_string('regularization', '3DCNNs',
                            """Regularization method.""")
 tf.app.flags.DEFINE_boolean('refinement', False,
                            """Whether to apply depth map refinement for 3DCNNs""")
 
 # training parameters
-tf.app.flags.DEFINE_integer('num_gpus', 2,
+tf.app.flags.DEFINE_integer('num_gpus', 1,
                             """Number of GPUs.""")
 tf.app.flags.DEFINE_integer('batch_size', 1, 
                             """Training batch size.""")
-tf.app.flags.DEFINE_integer('epoch', 6, 
+tf.app.flags.DEFINE_integer('epoch', 1,
                             """Training epoch number.""")
 tf.app.flags.DEFINE_float('val_ratio', 0, 
                           """Ratio of validation set when splitting dataset.""")
@@ -82,6 +82,7 @@ tf.app.flags.DEFINE_integer('snapshot', 5000,
 tf.app.flags.DEFINE_float('gamma', 0.9,
                           """Learning rate decay rate.""")
 
+tf.app.flags.DEFINE_integer('summmary_period', 100, 'period of saving summary')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -199,6 +200,7 @@ def train(traning_list):
         opt = tf.train.RMSPropOptimizer(learning_rate=lr_op)
 
         tower_grads = []
+        """ build graph """
         for i in xrange(FLAGS.num_gpus):
             with tf.device('/gpu:%d' % i):
                 with tf.name_scope('Model_tower%d' % i) as scope:
@@ -277,6 +279,7 @@ def train(traning_list):
         summaries.append(tf.summary.image('refine_depth', refined_depth_map))
         summaries.append(tf.summary.image('rgb', images[:, 0]))
         summaries.append(tf.summary.image('gt_depth', depth_image))
+        summaries.append(tf.summary.image('prob_map', prob_map))
 
         weights_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
         for var in weights_list:
