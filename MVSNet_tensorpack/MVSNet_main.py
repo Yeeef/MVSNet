@@ -20,7 +20,7 @@ def get_data(args, mode):
     if mode == 'train':
         # ds = PrefetchData(ds, 4, parallel)
         ds = DTU(args.data, args.view_num, mode, args.interval_scale, args.max_d)
-        ds = PrefetchDataZMQ(ds, nr_proc=parallel)
+        # ds = PrefetchDataZMQ(ds, nr_proc=parallel)
 
         ds = BatchData(ds, args.batch, remainder=False)
     elif mode == 'val':
@@ -88,10 +88,10 @@ def get_train_conf(model, args):
         callbacks=callbacks,
         extra_callbacks=[ProgressBar(names=['loss']),
                          MovingAverageSummary(),
-                         MergeAllSummaries(period=100 if steps_per_epoch > 100 else steps_per_epoch),
+                         MergeAllSummaries(period=10 if steps_per_epoch > 100 else steps_per_epoch),
                          RunUpdateOps()],
         steps_per_epoch=steps_per_epoch,
-        max_epoch=6,
+        max_epoch=1,
     )
 
 
@@ -117,7 +117,7 @@ def mvsnet_main():
     if args.feature == 'unet':
         feature_branch_function = unet_feature_extraction_branch
     else:
-        feature_branch_function = uni_feature_extraction_branch()
+        feature_branch_function = uni_feature_extraction_branch
 
     if args.gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
@@ -129,11 +129,13 @@ def mvsnet_main():
 
         if args.exp_name is None:
             if not args.refine:
-                exp_name = '{}-{}-b{}-{}-{}-no-refine'.format(args.max_d, args.interval_scale, args.batch, os.path.basename(args.data),
+                exp_name = '{}-{}-b{}-{}-{}-{}-no-refine'.format(args.max_d, args.interval_scale, args.batch, os.path.basename(args.data),
+                                                                args.feature,
                                             datetime.datetime.now().strftime("%m%d-%H%M"))
             else:
-                exp_name = '{}-{}-b{}-{}-{}-refine'.format(args.max_d, args.interval_scale, args.batch,
+                exp_name = '{}-{}-b{}-{}-{}-{}-refine'.format(args.max_d, args.interval_scale, args.batch,
                                                     os.path.basename(args.data),
+                                                    args.feature,
                                                     datetime.datetime.now().strftime("%m%d-%H%M"))
         else:
             exp_name = args.exp_name
@@ -143,6 +145,7 @@ def mvsnet_main():
             config.session_init = get_model_loader(args.load)
         gpus_id = args.gpu.split(',')
         gpus = len(gpus_id)
+        logger.info('num of gpus to use: {}'.format(gpus))
         if gpus > 1:
             trainer = SyncMultiGPUTrainerParameterServer(gpus)
             # trainer = SyncMultiGPUTrainerReplicated(gpus, mode='cpu')

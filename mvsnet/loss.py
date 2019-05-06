@@ -24,7 +24,6 @@ def non_zero_mean_absolute_diff(y_true, y_pred, interval):
     return masked_mae
 
 
-
 def less_one_percentage(y_true, y_pred, interval):
     """ less one accuracy for one batch """
     with tf.name_scope('less_one_error'):
@@ -35,6 +34,7 @@ def less_one_percentage(y_true, y_pred, interval):
         abs_diff_image = tf.abs(y_true - y_pred) / interval_image
         less_one_image = mask_true * tf.cast(tf.less_equal(abs_diff_image, 1.0), dtype='float32')
     return tf.reduce_sum(less_one_image) / denom
+
 
 def less_three_percentage(y_true, y_pred, interval):
     """ less three accuracy for one batch """

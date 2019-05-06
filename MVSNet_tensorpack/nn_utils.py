@@ -109,11 +109,21 @@ def feature_extraction_net(imgs, branch_function):
 
     feature_maps = []
     _, view_num, c, h, w = imgs.get_shape().as_list()
-    with tf.variable_scope('feature_extraction_net', reuse=tf.AUTO_REUSE):
-        for i in range(view_num):
+    ctx = get_current_tower_context()
+    if ctx.is_main_training_tower:
+        reuse_flag = False
+    else:
+        reuse_flag = True
+    with tf.variable_scope('feature_extraction_net', reuse=reuse_flag):
+        # ref view
+        feature_map = branch_function(imgs[:, 0])
+        feature_maps.append(feature_map)
+    with tf.variable_scope('feature_extraction_net', reuse=True):
+        for i in range(1, view_num):
             feature_map = branch_function(imgs[:, i])
             feature_maps.append(feature_map)
-        feature_maps = tf.transpose(feature_maps, [1, 0, 2, 3, 4], name='feature_maps')
+            # transpose is aiming at swap the position of channel and view_num
+    feature_maps = tf.transpose(feature_maps, [1, 0, 2, 3, 4], name='feature_maps')
     return feature_maps  # shape: batch, view_num, c, h, w
 
 
@@ -139,7 +149,8 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
         # get homographies of all views
         view_homographies = []
         for view in range(1, view_num):
-            view_cam = cams[:, view]
+            # view_cam = cams[:, view]
+            view_cam = tf.squeeze(tf.slice(cams, [0, view, 0, 0, 0], [-1, 1, 2, 4, 4]), axis=1)
             homographies = get_homographies(ref_cam, view_cam, depth_num, depth_start, depth_interval)
             view_homographies.append(homographies)
         
@@ -202,11 +213,8 @@ def cost_volume_regularization(cost_volume, training, trainable):
 
                 # shape: b, d, h, w
                 regularized_cost_volume = tf.squeeze(l6_2, axis=1, name='regularized_cost_volume')
-                prob_volume = tf.nn.softmax(
-                    tf.scalar_mul(-1, regularized_cost_volume), axis=1, name='prob_volume'
-                )
 
-    return prob_volume
+    return regularized_cost_volume
 
 
 # @layer_register(use_scope=True)
@@ -232,9 +240,12 @@ def deconv3d_bn_relu(inputs, filters, kernel_size, strides, training, trainable,
 
 
 @layer_register(log_shape=True)
-def soft_argmin(prob_volume, depth_start, depth_end, depth_num, batch_size):
+def soft_argmin(regularized_cost_volume, depth_start, depth_end, depth_num, depth_interval, batch_size):
     with tf.variable_scope('soft_argmin'):
-        volume_shape = tf.shape(prob_volume)
+        # b, d, h, w
+        probability_volume = tf.nn.softmax(
+            tf.scalar_mul(-1, regularized_cost_volume), axis=1, name='prob_volume')
+        volume_shape = tf.shape(probability_volume)
         # batch_size = volume_shape[0]
         soft_2d = []
         for i in range(batch_size):
@@ -246,11 +257,12 @@ def soft_argmin(prob_volume, depth_start, depth_end, depth_num, batch_size):
         soft_2d = tf.reshape(tf.stack(soft_2d, axis=0), [volume_shape[0], volume_shape[1], 1, 1])
         soft_4d = tf.tile(soft_2d, [1, 1, volume_shape[2], volume_shape[3]])
         # shape: (b, 1, h, w)
-        estimated_depth_map = tf.reduce_sum(soft_4d * prob_volume, axis=1, keep_dims=True, name='coarse_depth')
+        estimated_depth_map = tf.reduce_sum(soft_4d * probability_volume, axis=1, keep_dims=True, name='coarse_depth')
         # # shape: (b, 1, h, w)
         # estimated_depth_map = tf.expand_dims(estimated_depth_map, axis=1)
-
-    return estimated_depth_map
+        # shape of prob_map: b, h, w, 1
+        prob_map = get_propability_map(probability_volume, estimated_depth_map, depth_start, depth_interval)
+    return estimated_depth_map, prob_map
 
 
 def depth_refinement(coarse_depth, img, depth_start, depth_end):

@@ -13,6 +13,14 @@ __4.25__
 接下来准备再看看，且为源代码添加 image summary
 还有一点一直不确定，就是他用的 Kernel_initializer 下次可以在 tensorboard 的 histogram 里看一下
 
+__5.5__
+
+与原先的结果还是有细微的差异，所以必须要好好复现一下，首先检查代码，再去逐层的输入输出检查
+有没有可能是输入出了问题? 有没有可能是 feature_extraction_net 那里的参数并没有共享? channels_first?
+为了彻底检查，不如先把单gpu的行为搞清楚
+测试一组我们的图片
+应该是数据出问题了, 去除 prefetch 试试
+
 ### todo
 
 - [x] 添加 image summary
@@ -56,22 +64,25 @@ __4.25__
 ## gpu 0,1,2,3 batch_size 1
 
 - is graph alright?
-  - [] how to make a cool graph like Deepv3+？
+  - [ ] how to make a cool graph like Deepv3+？
 - use fake dataflow(size = 20)
 - `StagingInput` seems to take forever long(with fake dataflow, so it can not be the problem of dataflow)
   - not make warping_layer a layer, not helpful
   - use other multi gpu trainer, mayby not helpful, I didn't wait long
   - remove the warping layer, helpful
-- [] 总之是 warping layer 除了问题，一点一点解开结构去看哪个地方阻止了 multiGPU
+- [x] 总之是 warping layer 除了问题，一点一点解开结构去看哪个地方阻止了 multiGPU
+  - 在这里我修改了 tensorpack 的源码，强制不进行 staging input, 最后可以成功在多 gpu 上跑了
 - `Size of these collections were changed in tower1: (tf.GraphKeys.UPDATE_OPS: 70->92)`？
   - 应该就是多 gpu 的时候，每个都加入了 EMA 的 UPDATE_KEYS
-  - 可能有问题，我把 refinenet 去了之后每个 tower 都只有 22 个，为什么之前不是这样？这22个应该是 3d volume regularization 带来的，也就说之前 uninet 的 BN 的 updateop 加的可能有问题？
+  - [ ] 可能有问题，我把 refinenet 去了之后每个 tower 都只有 22 个，为什么之前不是这样？这22个应该是 3d volume regularization 带来的，也就说之前 uninet 的 BN 的 updateop 加的可能有问题？
 
 ## try original code
 
 非常慢，6个 epoch 要跑24个小时
 
 ### can multiple gpu?
+
+源代码可以多 gpu, 之后我去修改了 tensorpack 的源码，也成功支持了多 gpu
 
 ### how to get prob map?
 

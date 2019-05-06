@@ -24,12 +24,18 @@ def get_depth_meta(cams, depth_num):
         logger.warn('ref_cam type: {}'.format(type(ref_cam)))
 
         batch_size = tf.shape(cams)[0]
+        # depth_start = tf.reshape(
+        #     tf.slice(ref_cam, [0, 1, 3, 0], [batch_size, 1, 1, 1]), [batch_size], name='depth_start')
         depth_start = tf.reshape(
-            tf.slice(ref_cam, [0, 1, 3, 0], [batch_size, 1, 1, 1]), [batch_size], name='depth_start')
+            tf.slice(cams, [0, 0, 1, 3, 0], [batch_size, 1, 1, 1, 1]), [batch_size], name='depth_start')
+        # depth_interval = tf.reshape(
+        #     tf.slice(ref_cam, [0, 1, 3, 1], [batch_size, 1, 1, 1]), [batch_size], name='depth_interval')
         depth_interval = tf.reshape(
-            tf.slice(ref_cam, [0, 1, 3, 1], [batch_size, 1, 1, 1]), [batch_size], name='depth_interval')
-        depth_end = tf.add(depth_start, (tf.cast(depth_num, tf.float32) - 1) * depth_interval, name='depth_end')
+            tf.slice(cams, [0, 0, 1, 3, 1], [batch_size, 1, 1, 1, 1]), [batch_size], name='depth_interval')
 
+        # depth_end = tf.add(depth_start, (tf.cast(depth_num, tf.float32) - 1) * depth_interval, name='depth_end')
+        depth_end = depth_start + (tf.cast(depth_num, tf.float32) - 1) * depth_interval
+        depth_end = tf.identity(depth_end, 'depth_end')
         # depth_start = tf.map_fn(lambda cam: Cam.get_depth_meta(cam, 'depth_min'), ref_cam)
         # assert depth_start.get_shape().as_list() == [batch_size]
         # depth_interval = tf.map_fn(lambda cam: Cam.get_depth_meta(cam, 'depth_interval'), ref_cam)
@@ -64,7 +70,7 @@ class MVSNet(ModelDesc):
     """
     regularization_pattern = '.*/W |.*/b$'
 
-    debug_param_summary = False
+    debug_param_summary = True
 
     base_lr = 1e-3
 
@@ -94,7 +100,6 @@ class MVSNet(ModelDesc):
 
     def _preprocess(self, imgs, gt_depth):
         # transpose image
-        # center image done at dataflow
         with tf.variable_scope('preprocess'):
             imgs = center_image(imgs)
             imgs = tf.transpose(imgs, [0, 1, 4, 2, 3], name='transpose_imgs')
@@ -106,12 +111,7 @@ class MVSNet(ModelDesc):
     def build_graph(self, imgs, cams, gt_depth):
         # preprocess
         imgs, gt_depth, ref_img = self._preprocess(imgs, gt_depth)
-        # define a general arg scope first, like data_format
-        # ctx = get_current_tower_context()
-        # if self.bn_trainable is None:
-        #     self.bn_trainable = ctx.is_training
-        # if self.bn_training is None:
-        #     self.bn_training = ctx.is_training
+
         with argscope([tf.layers.conv3d, tf.layers.conv3d_transpose,
                        Conv2D, Conv2DTranspose, MaxPooling, AvgPooling, BatchNorm],
                       data_format=self.data_format):
@@ -130,10 +130,12 @@ class MVSNet(ModelDesc):
 
             # cost volume regularization
             # shape of probability_volume: b, 1, d, h/4, w/4
-            prob_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
+            regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
 
             # shape of coarse_depth: b, 1, h/4, w/4
-            coarse_depth = soft_argmin('soft_argmin', prob_volume, depth_start, depth_end, self.depth_num, self.batch_size)
+            # shape of prob_map: b, h/4, w/4, 1
+            coarse_depth, prob_map = soft_argmin('soft_argmin', regularized_cost_volume, depth_start, depth_end, self.depth_num,
+                                       depth_interval, self.batch_size)
 
             # shape of refine_depth: b, 1, h/4, w/4
             if self.is_refine:
@@ -157,6 +159,7 @@ class MVSNet(ModelDesc):
                     add_moving_summary(loss, loss_coarse, loss_refine, less_one_acc, less_three_acc)
                 # add_image_summary(tf.clip_by_value(tf.transpose(coarse_depth, [0, 2, 3, 1]), 0, 255)
                 #                   , name='coarse_depth')
+                add_image_summary(prob_map, name='prob_map')
                 add_image_summary(tf.transpose(coarse_depth, [0, 2, 3, 1])
                                   , name='coarse_depth')
                 add_image_summary(tf.transpose(refine_depth, [0, 2, 3, 1])
@@ -165,7 +168,7 @@ class MVSNet(ModelDesc):
                 add_image_summary(tf.transpose(gt_depth, [0, 2, 3, 1]), name='gt_depth')
 
             if self.debug_param_summary:
-                with tf.device('/cpu:0'):
+                with tf.device('/gpu:0'):
                     add_param_summary(
                         ['.*/W', ['histogram', 'rms']],
                         ['.*/gamma', ['histogram', 'mean']],

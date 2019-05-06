@@ -22,11 +22,13 @@ from preprocess import *
 from model import *
 from loss import *
 
+tf.app.flags.DEFINE_integer('gpu', '2',
+                            """gpu to use""")
 # dataset parameters
 tf.app.flags.DEFINE_string('dense_folder', None, 
                            """Root path to dense folder.""")
 tf.app.flags.DEFINE_string('model_dir', 
-                           '/data/tf_model',
+                           '/data3/lyf/mvsnet/models/tf_model',
                            """Path to restore the model.""")
 tf.app.flags.DEFINE_integer('ckpt_step', 100000,
                             """ckpt step.""")
@@ -142,6 +144,7 @@ class MVSGenerator:
                 scaled_cams = np.stack(scaled_cams, axis=0)
                 self.counter += 1
                 yield (scaled_images, centered_images, scaled_cams, image_index) 
+
 
 def mvsnet_pipeline(mvs_list):
 
@@ -263,6 +266,8 @@ def mvsnet_pipeline(mvs_list):
 
 def main(_):  # pylint: disable=unused-argument
     """ program entrance """
+    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+
     # generate input path list
     mvs_list = gen_pipeline_mvs_list(FLAGS.dense_folder)
     # mvsnet inference

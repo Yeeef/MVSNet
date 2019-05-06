@@ -7,6 +7,7 @@ Differentiable homography related.
 import tensorflow as tf
 import numpy as np
 
+
 def get_homographies(left_cam, right_cam, depth_num, depth_start, depth_interval):
     with tf.name_scope('get_homographies'):
         # cameras (K, R, t)
@@ -98,6 +99,7 @@ def get_homographies_inv_depth(left_cam, right_cam, depth_num, depth_start, dept
 
     return homographies
 
+
 def get_pixel_grids(height, width):
     # texture coordinate
     x_linspace = tf.linspace(0.5, tf.cast(width, 'float32') - 0.5, width)
@@ -108,6 +110,7 @@ def get_pixel_grids(height, width):
     ones = tf.ones_like(x_coordinates)
     indices_grid = tf.concat([x_coordinates, y_coordinates, ones], 0)
     return indices_grid
+
 
 def repeat_int(x, num_repeats):
     ones = tf.ones((1, num_repeats), dtype='int32')
