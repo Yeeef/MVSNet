@@ -3,19 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="213667f0-d67c-488a-9fa6-2ff0dbd4dd6a" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/0_cam.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/1_cam.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/2_cam.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/3_cam.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/DataManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/DataManager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/dataflow_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/test_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/test_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cnn_wrapper/mvsnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/cnn_wrapper/mvsnet.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cnn_wrapper/network.py" beforeDir="false" afterPath="$PROJECT_DIR$/cnn_wrapper/network.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/code_read.md" beforeDir="false" afterPath="$PROJECT_DIR$/code_read.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mvsnet/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/mvsnet/preprocess.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mvsnet/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/mvsnet/test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/record.md" beforeDir="false" afterPath="$PROJECT_DIR$/record.md" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -24,7 +12,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.14151464">
+    <splitter split-orientation="horizontal" split-proportion="0.17934166">
       <split-first>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="false">
@@ -66,8 +54,8 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/mvsnet/test.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="103">
-                  <caret line="137" column="36" selection-start-line="137" selection-start-column="36" selection-end-line="137" selection-end-column="36" />
+                <state relative-caret-position="122">
+                  <caret line="138" column="33" selection-start-line="138" selection-start-column="33" selection-end-line="138" selection-end-column="33" />
                 </state>
               </provider>
             </entry>
@@ -189,7 +177,7 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/mvsnet/visualize.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="418">
+                <state relative-caret-position="391">
                   <caret line="27" selection-start-line="27" selection-end-line="28" />
                   <folding>
                     <element signature="e#88#106#0" expanded="true" />
@@ -201,10 +189,21 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/test_utils.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="401">
-                  <caret line="273" column="26" lean-forward="true" selection-start-line="273" selection-start-column="26" selection-end-line="273" selection-end-column="26" />
+                <state relative-caret-position="45">
+                  <caret line="398" lean-forward="true" selection-start-line="398" selection-end-line="398" />
                   <folding>
                     <element signature="e#0#9#0" expanded="true" />
+                    <element signature="e#131#3168#0" />
+                    <element signature="e#808#1000#0" />
+                    <element signature="e#1041#1348#0" />
+                    <element signature="e#1393#2077#0" />
+                    <element signature="e#2179#2882#0" />
+                    <element signature="e#2809#3369#0" />
+                    <element signature="e#3411#5488#0" />
+                    <element signature="e#6375#6792#0" />
+                    <element signature="e#7224#8465#0" />
+                    <element signature="e#8196#9237#0" />
+                    <element signature="e#9988#11284#0" />
                   </folding>
                 </state>
               </provider>
@@ -322,17 +321,16 @@
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="65" />
-    <option name="y" value="-4" />
-    <option name="width" value="1855" />
-    <option name="height" value="1084" />
+    <option name="x" value="139" />
+    <option name="y" value="111" />
+    <option name="width" value="1853" />
+    <option name="height" value="1055" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -359,6 +357,7 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -441,7 +440,7 @@
       <workItem from="1555653861353" duration="42213000" />
       <workItem from="1555814063228" duration="3525000" />
       <workItem from="1556975879452" duration="52250000" />
-      <workItem from="1557215701240" duration="1408000" />
+      <workItem from="1557215701240" duration="8348000" />
     </task>
     <servers />
   </component>
@@ -478,7 +477,7 @@
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="198527000" />
+    <option name="totallyTimeSpent" value="205467000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -490,10 +489,9 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="64" y="-4" width="1857" height="1085" extended-state="6" />
-    <editor active="true" />
+    <frame x="65" y="-4" width="1855" height="1084" extended-state="6" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49943504" weight="0.15201768" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49943504" weight="0.31177446" />
       <window_info id="Structure" order="1" sideWeight="0.500565" side_tool="true" weight="0.036484245" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -507,8 +505,8 @@
       <window_info anchor="bottom" id="Version Control" order="8" weight="0.32925585" />
       <window_info anchor="bottom" id="Database Changes" order="9" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="11" visible="true" weight="0.24974516" />
-      <window_info anchor="bottom" id="Python Console" order="12" weight="0.31600407" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="11" visible="true" weight="0.33944955" />
+      <window_info anchor="bottom" id="Python Console" order="12" weight="0.2324159" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -743,16 +741,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/mvsnet/visualize.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="27" selection-start-line="27" selection-end-line="28" />
-          <folding>
-            <element signature="e#88#106#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/mvsnet/preprocess.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="665">
@@ -786,17 +774,38 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/mvsnet/test.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="103">
-          <caret line="137" column="36" selection-start-line="137" selection-start-column="36" selection-end-line="137" selection-end-column="36" />
+        <state relative-caret-position="122">
+          <caret line="138" column="33" selection-start-line="138" selection-start-column="33" selection-end-line="138" selection-end-column="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mvsnet/visualize.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="391">
+          <caret line="27" selection-start-line="27" selection-end-line="28" />
+          <folding>
+            <element signature="e#88#106#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/test_utils.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="401">
-          <caret line="273" column="26" lean-forward="true" selection-start-line="273" selection-start-column="26" selection-end-line="273" selection-end-column="26" />
+        <state relative-caret-position="45">
+          <caret line="398" lean-forward="true" selection-start-line="398" selection-end-line="398" />
           <folding>
             <element signature="e#0#9#0" expanded="true" />
+            <element signature="e#131#3168#0" />
+            <element signature="e#808#1000#0" />
+            <element signature="e#1041#1348#0" />
+            <element signature="e#1393#2077#0" />
+            <element signature="e#2179#2882#0" />
+            <element signature="e#2809#3369#0" />
+            <element signature="e#3411#5488#0" />
+            <element signature="e#6375#6792#0" />
+            <element signature="e#7224#8465#0" />
+            <element signature="e#8196#9237#0" />
+            <element signature="e#9988#11284#0" />
           </folding>
         </state>
       </provider>

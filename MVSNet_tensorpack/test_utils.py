@@ -1,10 +1,29 @@
 import os
+from os import path
 import cv2
 import numpy as np
 from DataManager import PFMReader, Cam
+import shutil
+from matplotlib import pyplot as plt
 
+pair_txt = \
+"""5
+0
+4 1 2036.53 2 1243.89 3 1052.87 4 1052.87 
+1
+4 0 2036.53 2 1243.89 3 1052.87 4 1052.87 
+2
+4 1 2036.53 0 1243.89 3 1052.87 4 1052.87 
+3
+4 0 2036.53 1 1243.89 2 1052.87 4 1052.87 
+4
+4 0 2036.53 1 1243.89 2 1052.87 3 1052.87 
+"""
 
-class LogReader(object):
+class LogManager(object):
+    """
+    Read our dataset log
+    """
     def __init__(self, file_path):
         self.file_path = file_path
         with open(file_path, 'r') as infile:
@@ -66,13 +85,13 @@ class LogReader(object):
         return {'id': pic_id, 'h': h, 'w': w, 'depth_min': depth_min, 'depth_max': depth_max,
                 'intrinsic': intrinsic, 'extrinsic': extrinsic}
 
-
-class LogFormatter(object):
-    def __init__(self):
-        pass
-
     @staticmethod
-    def format(parsed_dict, depth_min=425.0, depth_interval=2.5):
+    def format_log(parsed_dict, depth_min, depth_interval):
+        """
+
+        :param parsed_dict: output of the `parse` method
+        :return: write_lines, directly write it line by line would yield the standard dataset
+        """
         write_buffer = []
         write_buffer.append('extrinsic')
         extrinsic = parsed_dict['extrinsic']
@@ -85,6 +104,13 @@ class LogFormatter(object):
             write_buffer.append(' '.join([str(item) for item in row]))
         write_buffer.append('\n' + str(depth_min) + ' ' + str(depth_interval))
         return write_buffer
+
+    @staticmethod
+    def write_log_lines(log_lines, write_path):
+        with open(write_path, 'w') as outfile:
+            for log_line in log_lines:
+                outfile.write(log_line)
+                outfile.write('\n')
 
 
 class ScaleHandler(object):
@@ -183,6 +209,102 @@ def convert_png_to_jpg(dir):
         cv2.imwrite(os.path.join(dir, '%08d.jpg') % idx, img)
 
 
+def make_standard_dataset_dir(base_dir):
+    if path.exists(base_dir):
+        print('Warning! {} already exits, delete(d) or exit(e)?'.format(base_dir))
+        response = input()
+        if response == 'd':
+            shutil.rmtree(base_dir)
+        elif response == 'e':
+            exit(-1)
+        else:
+            print('unknown response {}'.format(response))
+
+    os.makedirs(path.join(base_dir, 'images'))
+    os.makedirs(path.join(base_dir, 'cams'))
+
+
+def is_img_file(file):
+    _, ext = path.splitext(file)
+    return ext.lower() == '.jpg' or ext.lower() == '.png'
+
+
+def gen_dataset(base_dir, out_dir, depth_min, depth_interval):
+    """
+    generate a well-formmated dataset directly
+    :param base_dir:
+    :param out_dir:
+    :param depth_min:
+    :param depth_interval:
+    :return:
+    """
+
+    """ make sure the out_dir is well formatted """
+    make_standard_dataset_dir(out_dir)
+
+    """ generate cam files """
+    log_dir = path.join(base_dir, 'realitycapture', 'color_depth_log')
+    log_path = path.join(log_dir, 'camera_params.log')
+    log_manager = LogManager(log_path)
+    parsed_dict_list = log_manager.parse()
+    for parsed_dict in parsed_dict_list:
+        standard_log_lines = log_manager.format_log(parsed_dict, depth_min, depth_interval)
+        log_manager.write_log_lines(standard_log_lines, path.join(out_dir, 'cams', '%08d_cam.txt' % parsed_dict['id']))
+
+    """ generate images """
+    img_dir = path.join(base_dir, 'realitycapture', 'color_depth_log')
+    img_files = list(filter(is_img_file, os.listdir(img_dir)))
+    for img_file in img_files:
+        img_id, _ = path.splitext(img_file)
+        img = cv2.imread(path.join(img_dir, img_file))
+        cv2.imwrite(path.join(out_dir, 'images', '%08d.jpg' % int(img_id)), img)
+
+    """ generate pair.txt """
+    global pair_txt
+    with open(path.join(out_dir, 'pair.txt'), 'w') as pairfile:
+        pairfile.write(pair_txt)
+
+
+def post_process(base_dir):
+    """
+    generate *.obj, generate rainbow depth map and rainbow prob map
+    :param base_dir:
+    :return:
+    """
+    all_files = os.listdir(base_dir)
+    img_files = list(filter(is_img_file, all_files))
+
+    out_dir = path.join(base_dir, 'post_process')
+
+    if path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.makedirs(out_dir)
+
+    for img_file in img_files:
+        file_id, _ = path.splitext(img_file)
+
+        """ depth_map and prob_map """
+        depth_path = path.join(base_dir, file_id + '_init.pfm')
+        prob_path = path.join(base_dir, file_id + '_prob.pfm')
+        # cmap = plt.cm.rainbow
+        depth_reader, prob_reader = PFMReader(depth_path), PFMReader(prob_path)
+        depth_map, prob_map = depth_reader.data,  prob_reader.data
+        plt.imsave(path.join(out_dir, file_id + '_depth.png'), depth_map, cmap='rainbow')
+        plt.imsave(path.join(out_dir, file_id + '_prob.png'), prob_map * 255, cmap='rainbow')
+
+        """ .obj file """
+        img = cv2.imread(path.join(base_dir, img_file))
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        cam = Cam(path.join(base_dir, file_id + '.txt'))
+        intrinsic = cam.intrinsic_mat
+        ma = np.ma.masked_equal(depth_map, 0.0, copy=False)
+        print('value range: ', ma.min(), ma.max())
+        depth_point_list = PointCloudGenerator.gen_3d_point_with_rgb(depth_map, rgb, intrinsic)
+        PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % file_id))
+        prob_point_list = PointCloudGenerator.gen_3d_point_with_rgb(prob_map, rgb, intrinsic)
+        PointCloudGenerator.write_as_obj(prob_point_list, path.join(out_dir, '%s_prob.obj' % file_id))
+
+
 def get_dataset(log_dir, out_dir, depth_min=425.0, depth_interval=2.5):
     DTU_MAX_DEPTH = 933.8
     log_reader = LogReader(log_dir)
@@ -262,6 +384,20 @@ def scale_camera(log_dir):
 
 
 if __name__ == "__main__":
+    dataset_list = '1 2 7 9 12 13 16 17 19 20 21 22 23 25 27 30 31 33 36'.split()
+    consumed_idx = '1 2 7 9 12 13'.split()
+    remain_dataset_list = set(dataset_list) - set(consumed_idx)
+    # for idx in [30, 33, 36]:
+    #     gen_dataset('/data3/lyf/multi_view/%s' % idx, '/data3/lyf/multi_view/standard_%s' % idx, 40, 0.1)
+    # os.chdir('/home/yeeef/Desktop/MVSNet/mvsnet')
+    # for idx in [30, 33, 36]:
+    #     os.system('python test.py --regularizion 3DCNNs --dense_folder /data3/lyf/multi_view/standard_%s --view_num 5 '
+    #               '--max_w 1152 --max_h 864 --max_d 256 --interval_scale 1' % idx)
+    for idx in sorted(list([30, 33, 36]), key=int):
+        print(idx)
+        post_process('/data3/lyf/multi_view/standard_%s/depths_mvsnet' % idx)
+
+    # gen_dataset('/data3/lyf/multi_view/12', '/data3/lyf/multi_view/standard_12', 20, 0.1)
     # convert_png_to_jpg('/data3/lyf/multi_view/test_0/images')
 
     # imgs = os.listdir('/data3/lyf/multi_view/test_16/images')
@@ -276,10 +412,10 @@ if __name__ == "__main__":
 
     # root_dir = '/data3/lyf/mvsnet/scan9/scan9_scale/depths_mvsnet'
     # root_dir = '/data3/lyf/mvsnet/preprocessed_inputs/tankandtemples/intermediate/M60/depths_mvsnet'
-    root_dir = '/data3/lyf/multi_view/test_1/depths_mvsnet'
+    # root_dir = '/data3/lyf/multi_view/test_1/depths_mvsnet'
 
-    for i in range(5):
-        generate_3d_point_cloud(os.path.join(root_dir, '0000000%d.jpg' % i),
-                            os.path.join(root_dir, '0000000%d_init.pfm' % i),
-                            os.path.join(root_dir, '0000000%d.txt' % i))
+    # for i in range(5):
+    #     generate_3d_point_cloud(os.path.join(root_dir, '0000000%d.jpg' % i),
+    #                         os.path.join(root_dir, '0000000%d_init.pfm' % i),
+    #                         os.path.join(root_dir, '0000000%d.txt' % i))
     # scale_camera('/data3/lyf/mvsnet/scan9/scan9_scale/cams')
