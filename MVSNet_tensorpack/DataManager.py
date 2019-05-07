@@ -98,7 +98,6 @@ class Cam(object):
 
         return ret
 
-
     def _load_cam_from_file(self, file_name):
 
         with open(file_name, 'r') as cam_file:
@@ -124,12 +123,12 @@ class Cam(object):
             elif len(words) == 30:
                 self.depth_min = float(words[27])
                 self.depth_interval = float(words[28]) * self.interval_scale
-                self.depth_num = int(words[29])
+                self.depth_num = round(float(words[29]))
                 self.depth_max = self.depth_min + self.interval_scale * self.depth_num
             elif len(words) == 31:
                 self.depth_min = float(words[27])
                 self.depth_interval = float(words[28]) * self.interval_scale
-                self.depth_num = int(words[29])
+                self.depth_num = round(float(words[29]))
                 self.depth_max = float(words[30])
             else:
                 self.depth_min = 0

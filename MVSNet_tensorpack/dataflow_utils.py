@@ -139,7 +139,7 @@ def gen_dtu_resized_path(dtu_data_folder, view_num, mode='train'):
                 # for each reference image
                 for p in range(0, int(cluster_list[0])):
                     paths = []
-                    # ref image
+                    # ref image' index
                     ref_index = int(cluster_list[22 * p + 1])
                     ref_image_path = os.path.join(
                         image_folder, ('rect_%03d_%d_r5000.png' % ((ref_index + 1), j)))

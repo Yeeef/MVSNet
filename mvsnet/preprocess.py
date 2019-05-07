@@ -47,24 +47,35 @@ def scale_mvs_camera(cams, scale=1):
         cams[view] = scale_camera(cams[view], scale=scale)
     return cams
 
-def scale_image(image, scale=1, interpolation='linear'):
+
+def scale_image(image, x_scale=1, y_scale=1, interpolation='linear'):
     """ resize image using cv2 """
     if interpolation == 'linear':
-        return cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+        # from matplotlib import pyplot as plt
+        # plt.figure()
+        # plt.imshow(image)
+        # plt.show()
+        return cv2.resize(image, None, fx=x_scale, fy=y_scale, interpolation=cv2.INTER_LINEAR)
     if interpolation == 'nearest':
-        return cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST)
+        return cv2.resize(image, None, fx=x_scale, fy=y_scale, interpolation=cv2.INTER_NEAREST)
+
 
 def scale_mvs_input(images, cams, depth_image=None, scale=1):
     """ resize input to fit into the memory """
+    print('-'*100)
+
+    print(FLAGS.view_num)
     for view in range(FLAGS.view_num):
-        images[view] = scale_image(images[view], scale=scale)
+
+        images[view] = scale_image(images[view], x_scale=scale, y_scale=scale)
         cams[view] = scale_camera(cams[view], scale=scale)
 
     if depth_image is None:
         return images, cams
     else:
-        depth_image = scale_image(depth_image, scale=scale, interpolation='nearest')
+        depth_image = scale_image(depth_image, x_scale=scale, y_scale=scale, interpolation='nearest')
         return images, cams, depth_image
+
 
 def crop_mvs_input(images, cams, depth_image=None):
     """ resize images and cameras to fit the network (can be divided by base image size) """
@@ -82,6 +93,7 @@ def crop_mvs_input(images, cams, depth_image=None):
             new_w = FLAGS.max_w
         else:
             new_w = int(math.ceil(w / FLAGS.base_image_size) * FLAGS.base_image_size)
+        print('h: {}, w:{}, new_h: {}, new_w: {}'.format(h, w, new_h, new_w))
         start_h = int(math.ceil((h - new_h) / 2))
         start_w = int(math.ceil((w - new_w) / 2))
         finish_h = start_h + new_h
@@ -91,7 +103,7 @@ def crop_mvs_input(images, cams, depth_image=None):
         cams[view][1][1][2] = cams[view][1][1][2] - start_h
 
     # crop depth image
-    if not depth_image is None:
+    if depth_image is not None:
         depth_image = depth_image[start_h:finish_h, start_w:finish_w]
         return images, cams, depth_image
     else:

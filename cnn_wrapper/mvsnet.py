@@ -77,7 +77,7 @@ class UNetDS2GN(Network):
         .conv_gn(3, base_filter * 16, 1, center=True, scale=True, name='2dconv4_1')
         .conv_gn(3, base_filter * 16, 1, center=True, scale=True, name='2dconv4_2')
         .deconv_gn(3, base_filter * 8, 2, center=True, scale=True, name='2dconv5_0'))
-
+        
         (self.feed('2dconv5_0', '2dconv3_2')
         .concat(axis=-1, name='2dconcat5_0')
         .conv_gn(3, base_filter * 8, 1, center=True, scale=True, name='2dconv5_1')

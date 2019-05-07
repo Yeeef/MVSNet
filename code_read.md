@@ -157,6 +157,16 @@ def load_cam(file, interval_scale=1):
 
 - load_pfm __depth_image__ 的读取
 
+### 如何构造符合他输入的训练集
+
+- [x] cam.txt 比较好构造
+- [ ] pair.txt
+  - 他的数据集局限性其实也是有的，别看有这么多图片，实际的 cam 位置只有 40 多种 
+
+#### pair.txt
+
+- first line: 总共有多少个训练集？
+
 
 ## model architecture
 

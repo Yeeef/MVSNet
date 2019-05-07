@@ -19,7 +19,16 @@ __5.5__
 有没有可能是输入出了问题? 有没有可能是 feature_extraction_net 那里的参数并没有共享? channels_first?
 为了彻底检查，不如先把单gpu的行为搞清楚
 测试一组我们的图片
-应该是数据出问题了, 去除 prefetch 试试
+应该是数据出问题了, 去除 prefetch 试试, 数据确实因为 prefetch 出了问题，把 prefetch 去除后还是不能完全复现
+检查一下 gn
+现在思路是这样，总之整个模块分离的很清晰了，我先把两边的 feature extraction 和 3d regularization 都搞得很浅
+再一个就是赶紧测试一组, 他的 crop image 绝对有 bug, 如果 max_d, max_h 比较小的话就会出问题
+他的图片到底有多大呢？
+
+__5.7__
+
+终于找到了在我们的数据上合适的参数，接下来写好一个脚本，基础功能就是根据咱们的数据集转换为他的输入，现在的 depth_min, depth_interval 必须人工调整，争取写一个自适应算法
+
 
 ### todo
 
