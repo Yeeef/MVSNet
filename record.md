@@ -28,7 +28,11 @@ __5.5__
 __5.7__
 
 终于找到了在我们的数据上合适的参数，接下来写好一个脚本，基础功能就是根据咱们的数据集转换为他的输入，现在的 depth_min, depth_interval 必须人工调整，争取写一个自适应算法
+接下来搞清楚早上讨论的问题，之后继续着手复现
 
+__5.9__
+
+细粒度复现开始，思路是这样，总之整个模块分离的很清晰了，我先把两边的 feature extraction 和 3d regularization 都搞得浅一点
 
 ### todo
 
@@ -38,7 +42,7 @@ __5.7__
   - [x] 如果我把 reuse 强行变成 false 呢？确实无法通过，会提示 name 已经用过了，不能再构建一次
 - [x] 如果原始代码多 gpu 正常，那么肯定是 tp 的某个机制出了问题
   - [x] 能否把 stageinput 从代码里去掉？ 这样一种比较 dirty 的方法不是长久之计，有时间提个 issue 去
-- [x] 确定 kernel initializer
+- [x] 确定 kernel initializerfsdf
   - [x] 确实是 glorot_uniform_distribution
 - [x] replicate 一下他的 unet
   - [x] 对比 wyx, zyk, mvsnet 的 groupnorm 实现方法，_有所不同_, channel_wise? reshape order
