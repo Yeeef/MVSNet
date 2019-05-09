@@ -25,7 +25,7 @@ def get_data(args, mode):
         ds = BatchData(ds, args.batch, remainder=False)
     elif mode == 'val':
         ds = DTU(args.data, args.view_num, mode, args.interval_scale, args.max_d)
-        ds = PrefetchData(ds, 4, parallel)
+        # ds = PrefetchData(ds, 4, parallel)
         ds = BatchData(ds, args.batch, remainder=True)
         # ds = FakeData([[3, 512, 640, 3], [3, 2, 4, 4], [512 // 4, 640 // 4, 1]], 1)
         # ds = BatchData(ds, args.batch, remainder=False)
