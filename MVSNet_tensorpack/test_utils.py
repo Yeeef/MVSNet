@@ -289,7 +289,7 @@ def post_process(base_dir):
         # cmap = plt.cm.rainbow
         depth_reader, prob_reader = PFMReader(depth_path), PFMReader(prob_path)
         depth_map, prob_map = depth_reader.data,  prob_reader.data
-        plt.imsave(path.join(out_dir, file_id + '_depth.png'), depth_map, cmap='rainbow')
+        plt.imsave(path.join(out_dir, file_id + '_depth.png'), depth_map * 255, cmap='rainbow')
         plt.imsave(path.join(out_dir, file_id + '_prob.png'), prob_map * 255, cmap='rainbow')
 
         """ .obj file """
@@ -349,7 +349,7 @@ def generate_3d_point_cloud(rgb_path, depth_path, cam_path):
     PointCloudGenerator.write_as_obj(point_list, '%s.obj' % cam_id)
 
 
-def scale_camera(log_dir):
+def scale_camera(log_dir, scale):
     log_files = os.listdir(log_dir)
     # log_files = sorted(log_files, key=lambda x: os.path.splitext())
     for log_file in log_files:
@@ -363,9 +363,9 @@ def scale_camera(log_dir):
         print(depth_min, depth_interval)
         # fx, fy = intrinsic[0, 0], intrinsic[1, 1]
         # intrinsic[0, 0], intrinsic[1, 1] = fx / 3.0, fy / 3.0
-        extrinsic[:3, 3] = extrinsic[:3, 3] / 3.0
-        depth_min = depth_min / 3.0
-        depth_interval = depth_interval / 3.0
+        extrinsic[:3, 3] = extrinsic[:3, 3] * scale
+        depth_min = depth_min * scale
+        depth_interval = depth_interval * scale
 
         with open(os.path.join(log_dir, log_file), 'w') as outfile:
             outfile.write('extrinsic\n')
@@ -383,19 +383,65 @@ def scale_camera(log_dir):
             outfile.write(str(depth_min) + ' ' + str(depth_interval))
 
 
+def gen_pair_txt(view_num, ids):
+    write_buffer = []
+    write_buffer.append(str(view_num) + '\n')
+    ids = set(ids)
+    for id in ids:
+        write_buffer.append(str(id) + '\n')
+        line = str(view_num - 1) + ' '
+        remain_ids = ids - set([id])
+        for remain_id in remain_ids:
+            line += '{} -1 '.format(remain_id)
+        line += '\n'
+        write_buffer.append(line)
+    return write_buffer
+
+
+def scale_translation(log_dir, scale):
+    log_files = os.listdir(log_dir)
+    # log_files = sorted(log_files, key=lambda x: os.path.splitext())
+    for log_file in log_files:
+        cam = Cam(os.path.join(log_dir, log_file), max_d=192)
+        intrinsic = cam.intrinsic_mat
+        extrinsic = cam.extrinsic_mat
+        depth_min = cam.depth_min
+        depth_interval = cam.depth_interval
+        print(intrinsic)
+        print(extrinsic)
+        print(depth_min, depth_interval)
+        # fx, fy = intrinsic[0, 0], intrinsic[1, 1]
+        # intrinsic[0, 0], intrinsic[1, 1] = fx / 3.0, fy / 3.0
+        extrinsic[:3, 3] = extrinsic[:3, 3] * scale
+        with open(os.path.join(log_dir, log_file), 'w') as outfile:
+            outfile.write('extrinsic\n')
+            for row in extrinsic:
+                row = [str(item) for item in row]
+                row = ' '.join(row)
+                outfile.write(row + '\n')
+            outfile.write('\n')
+            outfile.write('intrinsic\n')
+            for row in intrinsic:
+                row = [str(item) for item in row]
+                row = ' '.join(row)
+                outfile.write(row + '\n')
+            outfile.write('\n')
+            outfile.write(str(depth_min) + ' ' + str(depth_interval))
+
+
 if __name__ == "__main__":
-    dataset_list = '1 2 7 9 12 13 16 17 19 20 21 22 23 25 27 30 31 33 36'.split()
-    consumed_idx = '1 2 7 9 12 13'.split()
-    remain_dataset_list = set(dataset_list) - set(consumed_idx)
+    # dataset_list = '1 2 7 9 12 13 16 17 19 20 21 22 23 25 27 30 31 33 36'.split()
+    # consumed_idx = '1 2 7 9 12 13'.split()
+    # remain_dataset_list = set(dataset_list) - set(consumed_idx)
     # for idx in [30, 33, 36]:
     #     gen_dataset('/data3/lyf/multi_view/%s' % idx, '/data3/lyf/multi_view/standard_%s' % idx, 40, 0.1)
     # os.chdir('/home/yeeef/Desktop/MVSNet/mvsnet')
     # for idx in [30, 33, 36]:
     #     os.system('python test.py --regularizion 3DCNNs --dense_folder /data3/lyf/multi_view/standard_%s --view_num 5 '
     #               '--max_w 1152 --max_h 864 --max_d 256 --interval_scale 1' % idx)
-    for idx in sorted(list([30, 33, 36]), key=int):
-        print(idx)
-        post_process('/data3/lyf/multi_view/standard_%s/depths_mvsnet' % idx)
+    # for idx in sorted(list([30, 33, 36]), key=int):
+    #     print(idx)
+    #     post_process('/data3/lyf/multi_view/standard_%s/depths_mvsnet' % idx)
 
     # gen_dataset('/data3/lyf/multi_view/12', '/data3/lyf/multi_view/standard_12', 20, 0.1)
     # convert_png_to_jpg('/data3/lyf/multi_view/test_0/images')
@@ -419,3 +465,32 @@ if __name__ == "__main__":
     #                         os.path.join(root_dir, '0000000%d_init.pfm' % i),
     #                         os.path.join(root_dir, '0000000%d.txt' % i))
     # scale_camera('/data3/lyf/mvsnet/scan9/scan9_scale/cams')
+
+    selected_ids = {4, 5, 6, 8, 9}
+    log_dir = '/data3/lyf/mvsnet test/test2/color_depth_log'
+    out_dir = '/data3/lyf/mvsnet test/test2/'
+    if not path.exists(path.join(out_dir, 'cams')):
+        os.makedirs(path.join(out_dir, 'cams'))
+    if not path.exists(path.join(out_dir, 'images')):
+        os.makedirs(path.join(out_dir, 'images'))
+    log_path = path.join(log_dir, 'camera_params.log')
+    log_manager = LogManager(log_path)
+    parsed_dict_list = log_manager.parse()
+    selected_parsed_dict = list(filter(lambda x: int(x['id']) in selected_ids, parsed_dict_list))
+    for parsed_dict in selected_parsed_dict:
+        standard_log_lines = log_manager.format_log(parsed_dict, 4, 0.05)
+        log_manager.write_log_lines(standard_log_lines, path.join(out_dir, 'cams', '%08d_cam.txt' % parsed_dict['id']))
+
+    img_files = list(filter(is_img_file, os.listdir(log_dir)))
+    img_files = list(filter(lambda x: int(path.splitext(x)[0]) in selected_ids, img_files))
+    for img_file in img_files:
+        id, _ = path.splitext(img_file)
+        img = cv2.imread(path.join(log_dir, img_file))
+        cv2.imwrite(path.join(out_dir, 'images', '%08d.jpg' % int(id)), img)
+
+    pair_write_buffer = gen_pair_txt(len(selected_ids), selected_ids)
+    with open(path.join(out_dir, 'pair.txt'), 'w') as outfile:
+        [outfile.write(line) for line in pair_write_buffer]
+    # post_process('/data3/lyf/mvsnet test/test2/depths_mvsnet')
+
+    # scale_translation(path.join(out_dir, 'cams'), 200)

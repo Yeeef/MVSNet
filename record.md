@@ -34,6 +34,8 @@ __5.9__
 
 细粒度复现开始，思路是这样，总之整个模块分离的很清晰了，我先把两边的 feature extraction 和 3d regularization 都搞得浅一点
 
+meshlab 出现太小的原因大概是飞的该厉害了？
+
 ### todo
 
 - [x] 添加 image summary
