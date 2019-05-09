@@ -3,7 +3,18 @@
   <component name="ChangeListManager">
     <list default="true" id="213667f0-d67c-488a-9fa6-2ff0dbd4dd6a" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000000.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000000_cam.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000001.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000001_cam.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000002.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000002_cam.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000003.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000003_cam.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000004.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/00000004_cam.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/MVSNet_tensorpack/test_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/MVSNet_tensorpack/test_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/record.md" beforeDir="false" afterPath="$PROJECT_DIR$/record.md" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -190,7 +201,7 @@
             <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/test_utils.py">
               <provider selected="true" editor-type-id="text-editor">
                 <state relative-caret-position="45">
-                  <caret line="398" lean-forward="true" selection-start-line="398" selection-end-line="398" />
+                  <caret line="398" selection-start-line="398" selection-end-line="398" />
                   <folding>
                     <element signature="e#0#9#0" expanded="true" />
                     <element signature="e#131#3168#0" />
@@ -223,15 +234,6 @@
               <provider selected="true" editor-type-id="text-editor">
                 <state relative-caret-position="174591">
                   <caret line="9227" column="4" selection-start-line="9227" selection-start-column="4" selection-end-line="9227" selection-end-column="4" />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/00000000_cam.txt">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="152">
-                  <caret line="8" column="17" selection-start-line="8" selection-start-column="17" selection-end-line="8" selection-end-column="17" />
                 </state>
               </provider>
             </entry>
@@ -440,7 +442,7 @@
       <workItem from="1555653861353" duration="42213000" />
       <workItem from="1555814063228" duration="3525000" />
       <workItem from="1556975879452" duration="52250000" />
-      <workItem from="1557215701240" duration="8348000" />
+      <workItem from="1557215701240" duration="8854000" />
     </task>
     <servers />
   </component>
@@ -477,7 +479,7 @@
     </history-entry>
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="205467000" />
+    <option name="totallyTimeSpent" value="205973000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -792,7 +794,7 @@
     <entry file="file://$PROJECT_DIR$/MVSNet_tensorpack/test_utils.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="45">
-          <caret line="398" lean-forward="true" selection-start-line="398" selection-end-line="398" />
+          <caret line="398" selection-start-line="398" selection-end-line="398" />
           <folding>
             <element signature="e#0#9#0" expanded="true" />
             <element signature="e#131#3168#0" />
