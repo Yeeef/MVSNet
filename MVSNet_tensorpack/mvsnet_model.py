@@ -62,7 +62,7 @@ class MVSNet(ModelDesc):
     height = 512
     width = 640
     view_num = 3
-    data_format = 'channels_first'
+    data_format = 'channels_last'
     lambda_ = 1.
 
     weight_decay = 1.
@@ -104,8 +104,8 @@ class MVSNet(ModelDesc):
         # transpose image
         with tf.variable_scope('preprocess'):
             imgs = center_image(imgs)
-            imgs = tf.transpose(imgs, [0, 1, 4, 2, 3], name='transpose_imgs')
-            gt_depth = tf.transpose(gt_depth, [0, 3, 1, 2], name='transpose_gt_depth')
+            # imgs = tf.transpose(imgs, [0, 1, 4, 2, 3], name='transpose_imgs')
+            # gt_depth = tf.transpose(gt_depth, [0, 3, 1, 2], name='transpose_gt_depth')
             ref_img = imgs[:, 0]
             ref_img = tf.identity(ref_img, name='ref_img')
             return imgs, gt_depth, ref_img
@@ -133,6 +133,7 @@ class MVSNet(ModelDesc):
             # cost volume regularization
             # shape of probability_volume: b, 1, d, h/4, w/4
             # regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
+            # regularized_cost_volume: b, d, h/4, w/4
             regularized_cost_volume = simple_cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
 
             # shape of coarse_depth: b, 1, h/4, w/4
@@ -168,12 +169,12 @@ class MVSNet(ModelDesc):
                 # add_image_summary(tf.clip_by_value(tf.transpose(coarse_depth, [0, 2, 3, 1]), 0, 255)
                 #                   , name='coarse_depth')
                 add_image_summary(prob_map, name='prob_map')
-                add_image_summary(tf.transpose(coarse_depth, [0, 2, 3, 1])
+                add_image_summary(coarse_depth
                                   , name='coarse_depth')
-                add_image_summary(tf.transpose(refine_depth, [0, 2, 3, 1])
+                add_image_summary(refine_depth
                                   , name='refine_depth')
-                add_image_summary(tf.transpose(ref_img, [0, 2, 3, 1]), name='rgb')
-                add_image_summary(tf.transpose(gt_depth, [0, 2, 3, 1]), name='gt_depth')
+                add_image_summary(ref_img, name='rgb')
+                add_image_summary(gt_depth, name='gt_depth')
 
             if self.debug_param_summary:
                 with tf.device('/gpu:0'):

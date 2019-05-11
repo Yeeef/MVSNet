@@ -126,7 +126,7 @@ def feature_extraction_net(imgs, branch_function):
         for i in range(1, view_num):
             feature_map = branch_function(imgs[:, i])
             feature_maps.append(feature_map)
-            # transpose is aiming at swap the position of channel and view_num
+            # transpose is aiming at swap the position of batch and view_num
     feature_maps = tf.transpose(feature_maps, [1, 0, 2, 3, 4], name='feature_maps')
     return feature_maps  # shape: batch, view_num, c, h, w
 
@@ -143,6 +143,8 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
     """
     with tf.variable_scope('warping_layer'):
         _, view_num, c, h, w = feature_maps.get_shape().as_list()
+        _, view_num, h, w, c = feature_maps.get_shape().as_list()
+
         _, cam_num, *_ = cams.get_shape().as_list()
         assert view_num == cam_num, 'view num: {} conflicts with cam num: {}'.format(view_num, cam_num)
         
@@ -155,7 +157,8 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
         for view in range(1, view_num):
             # view_cam = cams[:, view]
             view_cam = tf.squeeze(tf.slice(cams, [0, view, 0, 0, 0], [-1, 1, 2, 4, 4]), axis=1)
-            homographies = get_homographies(ref_cam, view_cam, depth_num, depth_start, depth_interval)
+            homographies = get_homographies(ref_cam, view_cam, depth_num=depth_num, depth_start=depth_start,
+                                                    depth_interval=depth_interval)
             view_homographies.append(homographies)
         
         # shape of feature_map: b, c, h, w
@@ -182,7 +185,7 @@ def simple_cost_volume_regularization(cost_volume, training, trainable):
                 # l6_0 = deconv3d_bn_relu(l5_0, base_filter, 3, 2, training, trainable, name='3dconv6_0')
                 l6_2 = tf.layers.conv3d(cost_volume, 1, 3, strides=1, activation=None, name='3dconv6_2')
 
-                regularized_cost_volume = tf.squeeze(l6_2, axis=1, name='regularized_cost_volume')
+                regularized_cost_volume = tf.squeeze(l6_2, axis=4, name='regularized_cost_volume')
 
     return regularized_cost_volume
 
@@ -284,10 +287,11 @@ def soft_argmin(regularized_cost_volume, depth_start, depth_end, depth_num, dept
         soft_2d = tf.reshape(tf.stack(soft_2d, axis=0), [volume_shape[0], volume_shape[1], 1, 1])
         soft_4d = tf.tile(soft_2d, [1, 1, volume_shape[2], volume_shape[3]])
         # shape: (b, 1, h, w)
-        estimated_depth_map = tf.reduce_sum(soft_4d * probability_volume, axis=1, keep_dims=True, name='coarse_depth')
+        estimated_depth_map = tf.reduce_sum(soft_4d * probability_volume, axis=1, name='coarse_depth')
         # # shape: (b, 1, h, w)
         # estimated_depth_map = tf.expand_dims(estimated_depth_map, axis=1)
         # shape of prob_map: b, h, w, 1
+        estimated_depth_map = tf.expand_dims(estimated_depth_map, axis=3)
         prob_map = get_propability_map(probability_volume, estimated_depth_map, depth_start, depth_interval)
     return estimated_depth_map, prob_map
 
