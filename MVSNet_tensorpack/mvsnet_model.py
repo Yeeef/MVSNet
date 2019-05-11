@@ -3,8 +3,10 @@ from tensorpack.utils import logger
 from nn_utils import *
 from loss_utils import *
 from tensorpack.tfutils.summary import (add_moving_summary, add_param_summary, add_tensor_summary)
+from tensorpack.tfutils import optimizer, gradproc
 from summary_utils import add_image_summary
 import tensorflow as tf
+from tensorpack.tfutils.gradproc import SummaryGradient
 from DataManager import Cam
 
 """ monkey-patch """
@@ -130,7 +132,8 @@ class MVSNet(ModelDesc):
 
             # cost volume regularization
             # shape of probability_volume: b, 1, d, h/4, w/4
-            regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
+            # regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
+            regularized_cost_volume = simple_cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
 
             # shape of coarse_depth: b, 1, h/4, w/4
             # shape of prob_map: b, h/4, w/4, 1
@@ -141,22 +144,27 @@ class MVSNet(ModelDesc):
             if self.is_refine:
                 refine_depth = depth_refinement(coarse_depth, ref_img, depth_start, depth_end)
                 loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval, 'coarse_loss')
-                loss_refine, less_one_acc, less_three_acc = mvsnet_regression_loss(gt_depth, refine_depth,
+                loss_refine, less_one_accuracy, less_three_accuracy = mvsnet_regression_loss(gt_depth, refine_depth,
                                                                                    depth_interval, 'refine_loss')
             else:
                 refine_depth = coarse_depth
                 # loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval, 'coarse_loss')
-                loss_refine, less_one_acc, less_three_acc = mvsnet_regression_loss(gt_depth, refine_depth,
+                loss_refine, less_one_accuracy, less_three_accuracy = mvsnet_regression_loss(gt_depth, refine_depth,
                                                                                    depth_interval, 'refine_loss')
                 loss_coarse = tf.identity(loss_refine, name='coarse_loss')
 
             loss = tf.add(loss_refine / 2, loss_coarse * self.lambda_ / 2, name='loss')
-            less_one_acc = tf.identity(less_one_acc, name='less_one_acc')
-            less_three_acc = tf.identity(less_three_acc, name='less_three_acc')
+            less_one_accuracy = tf.identity(less_one_accuracy, name='less_one_accuracy')
+            less_three_accuracy = tf.identity(less_three_accuracy, name='less_three_accuracy')
 
             with tf.variable_scope('summaries'):
                 with tf.device('/cpu:0'):
-                    add_moving_summary(loss, loss_coarse, loss_refine, less_one_acc, less_three_acc)
+                    # tf.summary.scalar('loss', loss)
+                    # tf.summary.scalar('coarse_loss', loss_coarse)
+                    # tf.summary.scalar('refine_loss', loss_refine)
+                    # tf.summary.scalar('less_one_accuracy', less_one_acc)
+                    # tf.summary.scalar('less_three_accuracy', less_three_acc)
+                    add_moving_summary(loss, loss_coarse, loss_refine, less_one_accuracy, less_three_accuracy)
                 # add_image_summary(tf.clip_by_value(tf.transpose(coarse_depth, [0, 2, 3, 1]), 0, 255)
                 #                   , name='coarse_depth')
                 add_image_summary(prob_map, name='prob_map')
@@ -174,10 +182,14 @@ class MVSNet(ModelDesc):
                         ['.*/gamma', ['histogram', 'mean']],
                         ['.*/beta', ['histogram', 'mean']]
                     )
-                    all_vars = [var for var in tf.trainable_variables() if "gamma" in var.name or 'beta' in var.name]
-                    grad_vars = tf.gradients(loss, all_vars)
-                    for var, grad in zip(all_vars, grad_vars):
-                        add_tensor_summary(grad, ['histogram', 'rms'], name=var.name + '-grad')
+                    # all_vars = [var for var in tf.trainable_variables() if "gamma" in var.name or 'beta' in var.name]
+                    # grad_vars = tf.gradients(loss, all_vars)
+                    # for var, grad in zip(all_vars, grad_vars):
+                    #     add_tensor_summary(grad, ['histogram', 'rms'], name=var.name + '-grad')
+                    # all_vars = [var for var in tf.trainable_variables()]
+                    # grad_vars = tf.gradients(loss, all_vars)
+                    # for var, grad in zip(all_vars, grad_vars):
+                    #     add_tensor_summary(grad, ['histogram'], name=var.name + '-grad')
 
         return loss
 
@@ -191,4 +203,8 @@ class MVSNet(ModelDesc):
         )
         opt = tf.train.RMSPropOptimizer(learning_rate=lr)
         tf.summary.scalar('lr', lr)
-        return opt
+        return optimizer.apply_grad_processors(
+            opt, [
+                gradproc.SummaryGradient()
+            ]
+        )

@@ -6,8 +6,7 @@ from DataManager import PFMReader, Cam
 import shutil
 from matplotlib import pyplot as plt
 
-pair_txt = \
-"""5
+pair_txt = """5
 0
 4 1 2036.53 2 1243.89 3 1052.87 4 1052.87 
 1
@@ -19,6 +18,7 @@ pair_txt = \
 4
 4 0 2036.53 1 1243.89 2 1052.87 3 1052.87 
 """
+
 
 class LogManager(object):
     """
@@ -465,32 +465,32 @@ if __name__ == "__main__":
     #                         os.path.join(root_dir, '0000000%d_init.pfm' % i),
     #                         os.path.join(root_dir, '0000000%d.txt' % i))
     # scale_camera('/data3/lyf/mvsnet/scan9/scan9_scale/cams')
-
-    selected_ids = {4, 5, 6, 8, 9}
-    log_dir = '/data3/lyf/mvsnet test/test2/color_depth_log'
-    out_dir = '/data3/lyf/mvsnet test/test2/'
-    if not path.exists(path.join(out_dir, 'cams')):
-        os.makedirs(path.join(out_dir, 'cams'))
-    if not path.exists(path.join(out_dir, 'images')):
-        os.makedirs(path.join(out_dir, 'images'))
-    log_path = path.join(log_dir, 'camera_params.log')
-    log_manager = LogManager(log_path)
-    parsed_dict_list = log_manager.parse()
-    selected_parsed_dict = list(filter(lambda x: int(x['id']) in selected_ids, parsed_dict_list))
-    for parsed_dict in selected_parsed_dict:
-        standard_log_lines = log_manager.format_log(parsed_dict, 4, 0.05)
-        log_manager.write_log_lines(standard_log_lines, path.join(out_dir, 'cams', '%08d_cam.txt' % parsed_dict['id']))
-
-    img_files = list(filter(is_img_file, os.listdir(log_dir)))
-    img_files = list(filter(lambda x: int(path.splitext(x)[0]) in selected_ids, img_files))
-    for img_file in img_files:
-        id, _ = path.splitext(img_file)
-        img = cv2.imread(path.join(log_dir, img_file))
-        cv2.imwrite(path.join(out_dir, 'images', '%08d.jpg' % int(id)), img)
-
-    pair_write_buffer = gen_pair_txt(len(selected_ids), selected_ids)
-    with open(path.join(out_dir, 'pair.txt'), 'w') as outfile:
-        [outfile.write(line) for line in pair_write_buffer]
-    # post_process('/data3/lyf/mvsnet test/test2/depths_mvsnet')
+    #
+    # selected_ids = {4, 5, 6, 8, 9}
+    # log_dir = '/data3/lyf/mvsnet test/test2/color_depth_log'
+    # out_dir = '/data3/lyf/mvsnet test/test2/'
+    # if not path.exists(path.join(out_dir, 'cams')):
+    #     os.makedirs(path.join(out_dir, 'cams'))
+    # if not path.exists(path.join(out_dir, 'images')):
+    #     os.makedirs(path.join(out_dir, 'images'))
+    # log_path = path.join(log_dir, 'camera_params.log')
+    # log_manager = LogManager(log_path)
+    # parsed_dict_list = log_manager.parse()
+    # selected_parsed_dict = list(filter(lambda x: int(x['id']) in selected_ids, parsed_dict_list))
+    # for parsed_dict in selected_parsed_dict:
+    #     standard_log_lines = log_manager.format_log(parsed_dict, 4, 0.05)
+    #     log_manager.write_log_lines(standard_log_lines, path.join(out_dir, 'cams', '%08d_cam.txt' % parsed_dict['id']))
+    #
+    # img_files = list(filter(is_img_file, os.listdir(log_dir)))
+    # img_files = list(filter(lambda x: int(path.splitext(x)[0]) in selected_ids, img_files))
+    # for img_file in img_files:
+    #     id, _ = path.splitext(img_file)
+    #     img = cv2.imread(path.join(log_dir, img_file))
+    #     cv2.imwrite(path.join(out_dir, 'images', '%08d.jpg' % int(id)), img)
+    #
+    # pair_write_buffer = gen_pair_txt(len(selected_ids), selected_ids)
+    # with open(path.join(out_dir, 'pair.txt'), 'w') as outfile:
+    #     [outfile.write(line) for line in pair_write_buffer]
+    post_process('/data3/lyf/mvsnet test/test2/depths_mvsnet')
 
     # scale_translation(path.join(out_dir, 'cams'), 200)

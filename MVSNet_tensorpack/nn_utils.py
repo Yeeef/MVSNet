@@ -6,8 +6,8 @@ from tensorpack.utils import logger
 from tensorpack.tfutils.collection import *
 
 
-__all__ = ['feature_extraction_net', 'warping_layer', 'cost_volume_regularization', 'soft_argmin', 'depth_refinement',
-           ]
+# __all__ = ['feature_extraction_net', 'warping_layer', 'cost_volume_regularization', 'soft_argmin', 'depth_refinement',
+#            ]
 
 
 def uni_feature_extraction_branch(img):
@@ -99,6 +99,10 @@ def unet_feature_extraction_branch(img):
             return feature_map
 
 
+def simple_feature_extraction_branch(img):
+    pass
+
+
 def feature_extraction_net(imgs, branch_function):
     """
     feature extraction net
@@ -161,6 +165,28 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
     return cost_volume
 
 
+def simple_cost_volume_regularization(cost_volume, training, trainable):
+    with argscope([tf.layers.conv3d], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
+         argscope([tf.layers.conv3d_transpose], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
+         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99, axis=1):  # axis =1 for channels_first
+        base_filter = 8
+        with tf.variable_scope('cost_volume_regularization'):
+            with rename_tflayer_get_variable():
+                # l1_0 = conv3d_bn_relu(cost_volume, base_filter * 2, 3, strides=2, training=training,
+                #                       trainable=trainable,
+                #                       name='3dconv1_0')
+                # l2_0 = conv3d_bn_relu(l1_0, base_filter * 4, 3, 2, training, trainable, '3dconv2_0')
+                # l5_0 = deconv3d_bn_relu(l2_0, base_filter * 2, 3, 2, training, trainable, name='3dconv5_0')
+                # l6_0 = deconv3d_bn_relu(l5_0, base_filter, 3, 2, training, trainable, name='3dconv6_0')
+                l6_2 = tf.layers.conv3d(cost_volume, 1, 3, strides=1, activation=None, name='3dconv6_2')
+
+                regularized_cost_volume = tf.squeeze(l6_2, axis=1, name='regularized_cost_volume')
+
+    return regularized_cost_volume
+
+
 def cost_volume_regularization(cost_volume, training, trainable):
 
     with argscope([tf.layers.conv3d], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
@@ -208,8 +234,9 @@ def cost_volume_regularization(cost_volume, training, trainable):
                 l6_1 = tf.add(l6_0, l0_1, name='3dconv6_1')
                 
                 # shape of l6_2: b, 1, d, h, w
-                # l6_2 = tf.layers.conv3d(l6_1, 1, 3, strides=1, activation=None, name='3dconv6_2')
-                l6_2 = conv3d_bn_relu(l6_1, 1, 3, 1, training, trainable, name='3dconv6_2')
+                l6_2 = tf.layers.conv3d(l6_1, 1, 3, strides=1, activation=None, name='3dconv6_2')
+                # l6_2 = conv3d_bn_relu(l6_1, 1, 3, 1, training, trainable, name='3dconv6_2')
+                # l6_2 = tf.layers.conv3d(l6_1, 1, 3, 1, training, trainable, name='3dconv6_2')
 
                 # shape: b, d, h, w
                 regularized_cost_volume = tf.squeeze(l6_2, axis=1, name='regularized_cost_volume')

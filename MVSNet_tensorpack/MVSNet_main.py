@@ -9,6 +9,7 @@ import multiprocessing
 import os
 import tensorflow as tf
 from nn_utils import (uni_feature_extraction_branch, unet_feature_extraction_branch)
+from tensorpack.tfutils.gradproc import SummaryGradient
 
 
 def get_data(args, mode):
@@ -59,6 +60,7 @@ def get_train_conf(model, args):
     callbacks = [
         ModelSaver(),
         EstimatedTimeLeft(),
+        # SummaryGradient()
     ]
     infs = [ScalarStats(names=['loss'], prefix='val')]
     if nr_tower == 1:
@@ -86,7 +88,7 @@ def get_train_conf(model, args):
         model=model,
         data=train_data,
         callbacks=callbacks,
-        extra_callbacks=[ProgressBar(names=['loss']),
+        extra_callbacks=[ProgressBar(names=['loss', 'less_one_accuracy', 'less_three_accuracy']),
                          MovingAverageSummary(),
                          MergeAllSummaries(period=10 if steps_per_epoch > 100 else steps_per_epoch),
                          RunUpdateOps()],

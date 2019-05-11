@@ -119,12 +119,13 @@ class Cam(object):
                 self.depth_interval = float(words[28]) * self.interval_scale
                 assert self.max_d is not None, 'max_d should not be None when DEPTH_NUM is not provided'
                 self.depth_num = self.max_d
-                self.depth_max = self.depth_min + self.interval_scale * self.depth_num
+                self.depth_max = self.depth_min + self.depth_interval * self.depth_num
+                # print(self.depth_max, self.depth_min, self.depth_interval, self.depth_num)
             elif len(words) == 30:
                 self.depth_min = float(words[27])
                 self.depth_interval = float(words[28]) * self.interval_scale
                 self.depth_num = round(float(words[29]))
-                self.depth_max = self.depth_min + self.interval_scale * self.depth_num
+                self.depth_max = self.depth_min + self.depth_interval * self.depth_num
             elif len(words) == 31:
                 self.depth_min = float(words[27])
                 self.depth_interval = float(words[28]) * self.interval_scale

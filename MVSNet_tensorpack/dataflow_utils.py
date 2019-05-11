@@ -28,7 +28,7 @@ class DTU(RNGDataFlow):
     depth_image is of shape (h, w, 1)
     """
 
-    test = False
+    test = True
 
     def __init__(self, dtu_data_root, view_num, train_or_val, interval_scale, max_d, shuffle=None):
 
@@ -86,7 +86,7 @@ class DTU(RNGDataFlow):
             imgs = np.array(imgs)
             # (view_num, )
             cams = np.array(cams)
-            if self.test and self.count % 100 == 0:
+            if self.test and self.count % 10 == 0:
                 print('Forward pass: d_min = %f, d_max = %f.' %
                       (depth_min, depth_min + (self.max_d - 1) * depth_interval))
             assert cams.shape == (self.view_num, 2, 4, 4)
@@ -201,9 +201,9 @@ if __name__ == "__main__":
     count = 0
     for imgs, cams, depth_image in ds:
         # print(point)
-        if count > 400:
+        if count == 1420:
             plt.figure()
-            # print(imgs[0].shape)
+            print(imgs[0].shape)
             
             plt.subplot(1, 3, 1)
             plt.imshow(imgs[0].astype('uint8'))
@@ -211,10 +211,17 @@ if __name__ == "__main__":
             plt.imshow(imgs[1].astype('uint8'))
             plt.subplot(1, 3, 3)
             plt.imshow(imgs[2].astype('uint8'))
-        count += 1
-        if count >= 410:
+            plt.show()
             break
-    plt.show()
+            # for cam in cams:
+            #     depth_min, depth_interval, depth_num, depth_max = Cam.get_depth_meta(cam, 'depth_min', 'depth_interval',
+            #                                                                                            'depth_num',
+            #                                                                                             'depth_max')
+            #     depth_max = depth_min + (depth_num - 1) * depth_interval
+            #     print('{} {} {} {}'.format(depth_min, depth_interval, depth_num, depth_max))
+        count += 1
+        # if count >= 410:
+        #     break
     # parallel = min(40, multiprocessing.cpu_count() // 2)  # assuming hyperthreading
     # # if parallel < 16:
     # #     logger.warn("DataFlow may become the bottleneck when too few processes are used.")
