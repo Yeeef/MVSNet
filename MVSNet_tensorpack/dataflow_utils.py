@@ -28,7 +28,7 @@ class DTU(RNGDataFlow):
     depth_image is of shape (h, w, 1)
     """
 
-    test = True
+    test = False
 
     def __init__(self, dtu_data_root, view_num, train_or_val, interval_scale, max_d, shuffle=None):
 
@@ -49,7 +49,7 @@ class DTU(RNGDataFlow):
         self.count = 0
 
     def __len__(self):
-        # // TODO: check if it is true
+        # // fixed : check if it is true
         return self.len_data
         # if self.is_train:
         #     return 27097
@@ -57,6 +57,8 @@ class DTU(RNGDataFlow):
         #     return 882
 
     def __iter__(self):
+        if self.shuffle is not None:
+            self.rng.shuffle(self.sample_list)
         for data in self.sample_list:
             imgs = []
             cams = []

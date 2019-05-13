@@ -68,22 +68,22 @@ def unet_feature_extraction_branch(img):
             l4_2 = Conv2D('2dconv4_2', l4_1, base_filter*16, 3, strides=1, activation=mvsnet_gn_relu)
             l5_0 = Conv2DTranspose('2dconv5_0', l4_2, base_filter*8, 3, strides=2, activation=mvsnet_gn_relu)
 
-            concat5_0 = tf.concat((l5_0, l3_2), axis=1, name='2dconcat5_0')
+            concat5_0 = tf.concat((l5_0, l3_2), axis=3, name='2dconcat5_0')
             l5_1 = Conv2D('2dconv5_1', concat5_0, base_filter*8, 3, strides=1, activation=mvsnet_gn_relu)
             l5_2 = Conv2D('2dconv5_2', l5_1, base_filter*8, 3, strides=1, activation=mvsnet_gn_relu)
             l6_0 = Conv2DTranspose('2dconv6_0', l5_2, base_filter*4, 3, strides=2, activation=mvsnet_gn_relu)
 
-            concat6_0 = tf.concat((l6_0, l2_2), axis=1, name='2dconcat6_0')
+            concat6_0 = tf.concat((l6_0, l2_2), axis=3, name='2dconcat6_0')
             l6_1 = Conv2D('2dconv6_1', concat6_0, base_filter*4, 3, strides=1, activation=mvsnet_gn_relu)
             l6_2 = Conv2D('2dconv6_2', l6_1, base_filter*4, 3, strides=1, activation=mvsnet_gn_relu)
             l7_0 = Conv2DTranspose('2dconv7_0', l6_2, base_filter*2, 3, strides=2, activation=mvsnet_gn_relu)
 
-            concat7_0 = tf.concat((l7_0, l1_2), axis=1, name='2dconcat7_0')
+            concat7_0 = tf.concat((l7_0, l1_2), axis=3, name='2dconcat7_0')
             l7_1 = Conv2D('2dconv7_1', concat7_0, base_filter*2, 3, strides=1, activation=mvsnet_gn_relu)
             l7_2 = Conv2D('2dconv7_2', l7_1, base_filter*2, 3, strides=1, activation=mvsnet_gn_relu)
             l8_0 = Conv2DTranspose('2dconv8_0', l7_2, base_filter, 3, strides=2, activation=mvsnet_gn_relu)
 
-            concat8_0 = tf.concat((l8_0, l0_2), axis=1, name='2dconcat8_0')
+            concat8_0 = tf.concat((l8_0, l0_2), axis=3, name='2dconcat8_0')
             l8_1 = Conv2D('2dconv8_1', concat8_0, base_filter, 3, strides=1, activation=mvsnet_gn_relu)
             l8_2 = Conv2D('2dconv8_2', l8_1, base_filter, 3, strides=1, activation=mvsnet_gn_relu)
 
@@ -97,10 +97,6 @@ def unet_feature_extraction_branch(img):
             feature_map = Conv2D('2dconv10_2', l10_1, base_filter*4, 3, strides=1, activation=None)
 
             return feature_map
-
-
-def simple_feature_extraction_branch(img):
-    pass
 
 
 def feature_extraction_net(imgs, branch_function):
@@ -242,7 +238,7 @@ def cost_volume_regularization(cost_volume, training, trainable):
                 # l6_2 = tf.layers.conv3d(l6_1, 1, 3, 1, training, trainable, name='3dconv6_2')
 
                 # shape: b, d, h, w
-                regularized_cost_volume = tf.squeeze(l6_2, axis=1, name='regularized_cost_volume')
+                regularized_cost_volume = tf.squeeze(l6_2, axis=4, name='regularized_cost_volume')
 
     return regularized_cost_volume
 
@@ -354,12 +350,16 @@ def depth_refinement_net(coarse_depth, img):
 
 @layer_register(log_shape=True)
 def mvsnet_gn(x, group=32, group_channel=8, epsilon=1e-5,
-              channel_wise=True, data_format='channels_first',
+              channel_wise=True, data_format='channels_last',
               beta_initializer=tf.constant_initializer(),
               gamma_initializer=tf.constant_initializer(1.)):
     assert len(x.get_shape().as_list()) == 4, len(x.get_shape().as_list())
-    assert data_format == 'channels_first', 'currently only support NCHW but not {}'.format(data_format)
-    _, c, h, w = x.get_shape().as_list()
+    assert data_format in ['channels_first', 'channels_last'], data_format
+    if data_format == 'channels_first':
+        _, c, h, w = x.get_shape().as_list()
+    else:
+        _, h, w, c = x.get_shape().as_list()
+        x = tf.transpose(x, [0, 3, 1, 2])
     if channel_wise:
         g = tf.cast(tf.maximum(1, c // group_channel), tf.int32)
     else:
@@ -376,6 +376,8 @@ def mvsnet_gn(x, group=32, group_channel=8, epsilon=1e-5,
     x = (x - mean) / tf.sqrt(var + epsilon)
     x = tf.reshape(x, [-1, c, h, w]) * gamma + beta
 
+    if data_format == 'channels_last':
+        x = tf.transpose(x, [0, 2, 3, 1])
     return x
 
 

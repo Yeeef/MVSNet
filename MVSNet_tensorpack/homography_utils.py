@@ -126,49 +126,6 @@ def get_homographies_yeeef(batch_left_cam, batch_right_cam, depth_num, depth_sta
     return homographies
 
 
-def get_homographies(left_cam, right_cam, depth_num, depth_start, depth_interval):
-    with tf.name_scope('get_homographies'):
-        # cameras (K, R, t)
-        R_left = tf.slice(left_cam, [0, 0, 0, 0], [-1, 1, 3, 3])
-        R_right = tf.slice(right_cam, [0, 0, 0, 0], [-1, 1, 3, 3])
-        t_left = tf.slice(left_cam, [0, 0, 0, 3], [-1, 1, 3, 1])
-        t_right = tf.slice(right_cam, [0, 0, 0, 3], [-1, 1, 3, 1])
-        K_left = tf.slice(left_cam, [0, 1, 0, 0], [-1, 1, 3, 3])
-        K_right = tf.slice(right_cam, [0, 1, 0, 0], [-1, 1, 3, 3])
-
-        # depth
-        depth_num = tf.reshape(tf.cast(depth_num, 'int32'), [])
-
-        depth = depth_start + tf.cast(tf.range(depth_num), tf.float32) * depth_interval
-        # preparation
-        num_depth = tf.shape(depth)[0]
-        K_left_inv = tf.matrix_inverse(tf.squeeze(K_left, axis=1))
-        R_left_trans = tf.transpose(tf.squeeze(R_left, axis=1), perm=[0, 2, 1])
-        R_right_trans = tf.transpose(tf.squeeze(R_right, axis=1), perm=[0, 2, 1])
-
-        fronto_direction = tf.slice(tf.squeeze(R_left, axis=1), [0, 2, 0], [-1, 1, 3])          # (B, D, 1, 3)
-
-        c_left = -tf.matmul(R_left_trans, tf.squeeze(t_left, axis=1))
-        c_right = -tf.matmul(R_right_trans, tf.squeeze(t_right, axis=1))                        # (B, D, 3, 1)
-        c_relative = tf.subtract(c_right, c_left)
-
-        # compute
-        batch_size = tf.shape(R_left)[0]
-        temp_vec = tf.matmul(c_relative, fronto_direction)
-        depth_mat = tf.tile(tf.reshape(depth, [batch_size, num_depth, 1, 1]), [1, 1, 3, 3])
-
-        temp_vec = tf.tile(tf.expand_dims(temp_vec, axis=1), [1, num_depth, 1, 1])
-
-        middle_mat0 = tf.eye(3, batch_shape=[batch_size, num_depth]) - temp_vec / depth_mat
-        middle_mat1 = tf.tile(tf.expand_dims(tf.matmul(R_left_trans, K_left_inv), axis=1), [1, num_depth, 1, 1])
-        middle_mat2 = tf.matmul(middle_mat0, middle_mat1)
-
-        homographies = tf.matmul(tf.tile(K_right, [1, num_depth, 1, 1])
-                     , tf.matmul(tf.tile(R_right, [1, num_depth, 1, 1])
-                     , middle_mat2))
-
-    return homographies
-
 # def get_homographies(left_cam, right_cam, depth_num, depth_start, depth_interval):
 #     with tf.name_scope('get_homographies'):
 #         # cameras (K, R, t)
@@ -211,6 +168,49 @@ def get_homographies(left_cam, right_cam, depth_num, depth_start, depth_interval
 #                      , middle_mat2))
 #
 #     return homographies
+
+def get_homographies(left_cam, right_cam, depth_num, depth_start, depth_interval):
+    with tf.name_scope('get_homographies'):
+        # cameras (K, R, t)
+        R_left = tf.slice(left_cam, [0, 0, 0, 0], [-1, 1, 3, 3])
+        R_right = tf.slice(right_cam, [0, 0, 0, 0], [-1, 1, 3, 3])
+        t_left = tf.slice(left_cam, [0, 0, 0, 3], [-1, 1, 3, 1])
+        t_right = tf.slice(right_cam, [0, 0, 0, 3], [-1, 1, 3, 1])
+        K_left = tf.slice(left_cam, [0, 1, 0, 0], [-1, 1, 3, 3])
+        K_right = tf.slice(right_cam, [0, 1, 0, 0], [-1, 1, 3, 3])
+
+        # depth
+        depth_num = tf.reshape(tf.cast(depth_num, 'int32'), [])
+
+        depth = depth_start + tf.cast(tf.range(depth_num), tf.float32) * depth_interval
+        # preparation
+        num_depth = tf.shape(depth)[0]
+        K_left_inv = tf.matrix_inverse(tf.squeeze(K_left, axis=1))
+        R_left_trans = tf.transpose(tf.squeeze(R_left, axis=1), perm=[0, 2, 1])
+        R_right_trans = tf.transpose(tf.squeeze(R_right, axis=1), perm=[0, 2, 1])
+
+        fronto_direction = tf.slice(tf.squeeze(R_left, axis=1), [0, 2, 0], [-1, 1, 3])          # (B, D, 1, 3)
+
+        c_left = -tf.matmul(R_left_trans, tf.squeeze(t_left, axis=1))
+        c_right = -tf.matmul(R_right_trans, tf.squeeze(t_right, axis=1))                        # (B, D, 3, 1)
+        c_relative = tf.subtract(c_right, c_left)
+
+        # compute
+        batch_size = tf.shape(R_left)[0]
+        temp_vec = tf.matmul(c_relative, fronto_direction)
+        depth_mat = tf.tile(tf.reshape(depth, [batch_size, num_depth, 1, 1]), [1, 1, 3, 3])
+
+        temp_vec = tf.tile(tf.expand_dims(temp_vec, axis=1), [1, num_depth, 1, 1])
+
+        middle_mat0 = tf.eye(3, batch_shape=[batch_size, num_depth]) - temp_vec / depth_mat
+        middle_mat1 = tf.tile(tf.expand_dims(tf.matmul(R_left_trans, K_left_inv), axis=1), [1, num_depth, 1, 1])
+        middle_mat2 = tf.matmul(middle_mat0, middle_mat1)
+
+        homographies = tf.matmul(tf.tile(K_right, [1, num_depth, 1, 1])
+                     , tf.matmul(tf.tile(R_right, [1, num_depth, 1, 1])
+                     , middle_mat2))
+
+    return homographies
 
 
 def build_cost_volume(view_homographies, feature_maps, depth_num):

@@ -114,7 +114,7 @@ class MVSNet(ModelDesc):
         # preprocess
         imgs, gt_depth, ref_img = self._preprocess(imgs, gt_depth)
 
-        with argscope([tf.layers.conv3d, tf.layers.conv3d_transpose,
+        with argscope([tf.layers.conv3d, tf.layers.conv3d_transpose, mvsnet_gn,
                        Conv2D, Conv2DTranspose, MaxPooling, AvgPooling, BatchNorm],
                       data_format=self.data_format):
             # feature extraction
@@ -132,9 +132,9 @@ class MVSNet(ModelDesc):
 
             # cost volume regularization
             # shape of probability_volume: b, 1, d, h/4, w/4
-            # regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
+            regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
             # regularized_cost_volume: b, d, h/4, w/4
-            regularized_cost_volume = simple_cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
+            # regularized_cost_volume = simple_cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
 
             # shape of coarse_depth: b, 1, h/4, w/4
             # shape of prob_map: b, h/4, w/4, 1

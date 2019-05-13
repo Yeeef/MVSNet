@@ -90,10 +90,10 @@ def get_train_conf(model, args):
         callbacks=callbacks,
         extra_callbacks=[ProgressBar(names=['loss', 'less_one_accuracy', 'less_three_accuracy']),
                          MovingAverageSummary(),
-                         MergeAllSummaries(period=10 if steps_per_epoch > 100 else steps_per_epoch),
+                         MergeAllSummaries(period=100 if steps_per_epoch > 100 else steps_per_epoch),
                          RunUpdateOps()],
         steps_per_epoch=steps_per_epoch,
-        max_epoch=1,
+        max_epoch=6,
     )
 
 
