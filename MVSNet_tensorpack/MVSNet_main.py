@@ -4,12 +4,19 @@ import argparse
 from mvsnet_model import MVSNet
 import datetime
 from tensorpack.utils.gpu import get_num_gpu
+from tensorpack.predict import FeedfreePredictor
 from dataflow_utils import *
 import multiprocessing
 import os
 import tensorflow as tf
 from nn_utils import (uni_feature_extraction_branch, unet_feature_extraction_branch)
 from tensorpack.tfutils.gradproc import SummaryGradient
+from matplotlib import pyplot as plt
+from os import path
+from DataManager import Cam
+import cv2
+import numpy as np
+from test_utils import PointCloudGenerator
 
 
 def get_data(args, mode):
@@ -97,6 +104,118 @@ def get_train_conf(model, args):
     )
 
 
+def evaluate(model, sess_init, args):
+    """
+    use feedforward trainconfig of tensorpack
+    :return:
+    """
+    out_path = args.out
+    if not os.path.exists(out_path):
+        logger.warn(f'{out_path} does not exist, aumatically create for you')
+        os.makedirs(out_path)
+    else:
+        logger.warn(f'{out_path} exists, it will be overwritten, y or n?')
+        response = input()
+        if response != 'y':
+            logger.info(f'get {response} as answer, exit -1')
+            exit(-1)
+        else:
+            logger.info(f'{out_path} will be overwritten')
+
+    pred_conf = PredictConfig(
+        model=model,
+        session_init=sess_init,
+        input_names=['imgs', 'cams', 'gt_depth'],
+        output_names=['prob_map', 'coarse_depth', 'refine_depth', 'imgs', 'coarse_loss', 'refine_loss',
+                      'less_one_accuracy', 'less_three_accuracy']
+    )
+    ds_val = get_data(args, 'val')
+    pred_func = FeedfreePredictor(pred_conf, QueueInput(ds_val), device='/gpu:0')
+    global_count = 0
+    avg_loss = 0.
+    avg_less_one_acc = 0.
+    avg_less_three_acc = 0.
+    ds_len = len(ds_val)
+    for i in range(ds_len):
+        prob_map, coarse_depth, refine_depth, imgs, coarse_loss, refine_loss, less_one_accuracy, less_three_accuracy = pred_func()
+        batch_size, h, w, *_ = prob_map.shape
+        ref_img = imgs[0]
+        assert ref_img.shape[2] == 3, ref_img.shape
+        for _ in range(batch_size):
+            plt.imsave(path.join(out_path, str(global_count) + '_prob.png'), prob_map, cmap='rainbow')
+            plt.imsave(path.join(out_path, str(global_count) + '_depth.png'), coarse_depth, cmap='rainbow')
+            plt.imsave(path.join(out_path, str(global_count) + '_rgb.png'), ref_img.astype('uint8'))
+
+            global_count += 1
+            avg_loss += 0.5 * (coarse_loss + refine_depth)
+            avg_less_one_acc += less_one_accuracy
+            avg_less_three_acc += less_three_accuracy
+    avg_loss /= ds_len
+    avg_less_one_acc /= ds_len
+    avg_less_three_acc /= ds_len
+    with open(path.join(out_path, '!log.txt'), 'w') as out_file:
+        out_file.write(f'loss: {avg_loss}\n')
+        out_file.write(f'less_one_acc: {avg_less_one_acc}\n')
+        out_file.write(f'less_three_acc: {avg_less_three_acc}\n')
+
+    return avg_loss, avg_less_three_acc, avg_less_one_acc
+
+
+def test(model, sess_init, args):
+    """
+    outputs prob_map, depth_map, rgb, and meshlab .obj file
+    :param model:
+    :param sess_init:
+    :param args:
+    :return:
+    """
+    data_dir = args.data
+    out_dir = args.out
+    view_num = args.view_num
+    max_h = args.max_h
+    max_w = args.max_w
+    max_d = args.max_d
+    interval_scale = args.interval_scale
+    logger.info('data_dir: %s, out_dir: %s' % (data_dir, out_dir))
+    if not os.path.exists(out_dir):
+        logger.warn(f'{out_dir} does not exist, aumatically create for you')
+        os.makedirs(out_dir)
+    else:
+        logger.warn(f'{out_dir} exists, it will be overwritten, y or n?')
+        response = input()
+        if response != 'y':
+            logger.info(f'get {response} as answer, exit -1')
+            exit(-1)
+        else:
+            logger.info(f'{out_dir} will be overwritten')
+    pred_conf = PredictConfig(
+        model=model,
+        session_init=sess_init,
+        input_names=['imgs', 'cams'],
+        output_names=['prob_map', 'coarse_depth', 'refine_depth']
+    )
+    # create imgs and cams data
+    data_points = list(DTU.make_test_data(data_dir, view_num, max_h, max_w, max_d, interval_scale))
+    pred_func = OfflinePredictor(pred_conf)
+    batch_prob_map, batch_coarse_depth, batch_refine_depth = pred_func(data_points)
+
+    for i in range(len(batch_prob_map)):
+        imgs, cams = data_points[i]
+        prob_map, coarse_depth, refine_depth = batch_prob_map[i], batch_coarse_depth[i], batch_refine_depth[i]
+        ref_img, ref_cam = imgs[0], cams[0]
+        rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
+        plt.imsave(path.join(out_dir, str(i) + '_prob.png'), prob_map, cmap='rainbow')
+        plt.imsave(path.join(out_dir, str(i) + '_depth.png'), coarse_depth, cmap='rainbow')
+        plt.imsave(path.join(out_dir, str(i) + '_rgb.png'), rgb.astype('uint8'))
+        Cam.write_cam(ref_cam, path.join(out_dir, str(i) + '_cam.txt'))
+
+        intrinsic = Cam.get_depth_meta(ref_cam, 'intrinsic')
+        ma = np.ma.masked_equal(coarse_depth, 0.0, copy=False)
+        logger.info('value range: %f -> %f' % (ma.min(), ma.max()))
+        depth_point_list = PointCloudGenerator.gen_3d_point_with_rgb(coarse_depth, rgb, intrinsic)
+        PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % str(i)))
+
+
 def mvsnet_main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--logdir', help='path to save model ckpt', default='.')
@@ -107,7 +226,7 @@ def mvsnet_main():
     parser.add_argument('--mode', '-m', help='train / val / test', default='train', choices=['train', 'val', 'test', 'fake'])
     parser.add_argument('--out', default='./',
                         help='output path for evaluation and test, default to current folder')
-    parser.add_argument('--batch', default=2, type=int, help="Batch size per tower.")
+    parser.add_argument('--batch', default=1, type=int, help="Batch size per tower.")
     parser.add_argument('--max_d', help='depth num for MVSNet', required=True, type=int)
     parser.add_argument('--interval_scale', required=True, type=float)
     parser.add_argument('--view_num', required=True, type=int)
@@ -157,9 +276,24 @@ def mvsnet_main():
         launch_train_with_config(config, trainer)
 
     elif args.mode == 'val':
-        pass
+        assert args.load, 'in eval mode, you have to specify a trained model'
+        assert args.out, 'in eval mode, you have to specify the output dir path'
+        model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
+                       branch_function=feature_branch_function, is_refine=args.refine)
+        sess_init = get_model_loader(args.load)
+        avg_loss, avg_less_three_acc, avg_less_one_acc = evaluate(model, sess_init, args)
+        logger.info(f'val loss: {avg_loss}')
+        logger.info(f'val less three acc: {avg_less_three_acc}')
+        logger.info(f'val less one acc: {avg_less_one_acc}')
+
     else:  # test
-        pass
+        assert args.load, 'in eval mode, you have to specify a trained model'
+        assert args.out, 'in eval mode, you have to specify the output dir path'
+        assert args.data, 'in eval mode, you have to specify the data dir path'
+        model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
+                       branch_function=feature_branch_function, is_refine=args.refine)
+        sess_init = get_model_loader(args.load)
+        test(model, sess_init, args)
 
 
 if __name__ == '__main__':

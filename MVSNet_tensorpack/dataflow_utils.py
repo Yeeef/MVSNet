@@ -8,6 +8,7 @@ from tensorpack import *
 from DataManager import (Cam, PFMReader, mask_depth_image)
 import cv2
 from tensorpack.utils import logger
+import math
 
 __all__ = ['DTU']
 
@@ -18,6 +19,122 @@ def center_image(img):
     var = np.var(img, axis=(0, 1), keepdims=True)
     mean = np.mean(img, axis=(0, 1), keepdims=True)
     return (img - mean) / (np.sqrt(var) + 0.00000001)
+
+
+def gen_test_input_sample_list(data_dir, view_num):
+    """ mvs input path list """
+    image_folder = os.path.join(data_dir, 'images')
+    cam_folder = os.path.join(data_dir, 'cams')
+    cluster_list_path = os.path.join(data_dir, 'pair.txt')
+    cluster_list = open(cluster_list_path).read().split()
+
+    # for each dataset
+    mvs_list = []
+    pos = 1
+    for i in range(int(cluster_list[0])):
+        paths = []
+        # ref image
+        ref_index = int(cluster_list[pos])
+        pos += 1
+        ref_image_path = os.path.join(image_folder, ('%08d.jpg' % ref_index))
+        ref_cam_path = os.path.join(cam_folder, ('%08d_cam.txt' % ref_index))
+        paths.append(ref_image_path)
+        paths.append(ref_cam_path)
+        # view images
+        all_view_num = int(cluster_list[pos])
+        pos += 1
+        check_view_num = min(view_num - 1, all_view_num)
+        for view in range(check_view_num):
+            view_index = int(cluster_list[pos + 2 * view])
+            view_image_path = os.path.join(image_folder, ('%08d.jpg' % view_index))
+            view_cam_path = os.path.join(cam_folder, ('%08d_cam.txt' % view_index))
+            paths.append(view_image_path)
+            paths.append(view_cam_path)
+        pos += 2 * all_view_num
+        # depth path
+        mvs_list.append(paths)
+    return mvs_list
+
+
+def scale_mvs_input(images, cams, depth_image=None, scale=1.):
+    """ resize input to fit into the memory """
+    print('-'*100)
+    view_num = len(images)
+    for view in range(view_num):
+
+        images[view] = scale_image(images[view], x_scale=scale, y_scale=scale)
+        cams[view] = scale_camera(cams[view], scale=scale)
+
+    if depth_image is None:
+        return images, cams
+    else:
+        depth_image = scale_image(depth_image, x_scale=scale, y_scale=scale, interpolation='nearest')
+        return images, cams, depth_image
+
+
+def scale_camera(cam, scale=1.):
+    """ resize input in order to produce sampled depth map """
+    new_cam = np.copy(cam)
+    # focal:
+    new_cam[1][0][0] = cam[1][0][0] * scale
+    new_cam[1][1][1] = cam[1][1][1] * scale
+    # principle point:
+    new_cam[1][0][2] = cam[1][0][2] * scale
+    new_cam[1][1][2] = cam[1][1][2] * scale
+    return new_cam
+
+
+def scale_image(image, x_scale=1., y_scale=1., interpolation='linear'):
+    """ resize image using cv2 """
+    if interpolation == 'linear':
+        return cv2.resize(image, None, fx=x_scale, fy=y_scale, interpolation=cv2.INTER_LINEAR)
+    if interpolation == 'nearest':
+        return cv2.resize(image, None, fx=x_scale, fy=y_scale, interpolation=cv2.INTER_NEAREST)
+
+
+def crop_mvs_input(images, cams, max_h, max_w, base_image_size=8, depth_image=None):
+    """
+    resize images and cameras to fit the network (can be divided by base image size)
+    the input must be dividable with 8
+    """
+
+    view_num = len(images)
+    # crop images and cameras
+    for view in range(view_num):
+        h, w, _ = images[view].shape
+        new_h = h
+        new_w = w
+        if new_h > max_h:
+            new_h = max_h
+        else:
+            new_h = int(math.ceil(h / base_image_size) * base_image_size)
+        if new_w > max_w:
+            new_w = max_w
+        else:
+            new_w = int(math.ceil(w / base_image_size) * base_image_size)
+        print('h: {}, w:{}, new_h: {}, new_w: {}'.format(h, w, new_h, new_w))
+        start_h = int(math.ceil((h - new_h) / 2))
+        start_w = int(math.ceil((w - new_w) / 2))
+        finish_h = start_h + new_h
+        finish_w = start_w + new_w
+        images[view] = images[view][start_h:finish_h, start_w:finish_w]
+        cams[view][1][0][2] = cams[view][1][0][2] - start_w
+        cams[view][1][1][2] = cams[view][1][1][2] - start_h
+
+    # crop depth image
+    if depth_image is not None:
+        depth_image = depth_image[start_h:finish_h, start_w:finish_w]
+        return images, cams, depth_image
+    else:
+        return images, cams
+
+
+def scale_mvs_camera(cams, scale=1.):
+    """ resize input in order to produce sampled depth map """
+    view_num = len(cams)
+    for view in range(view_num):
+        cams[view] = scale_camera(cams[view], scale=scale)
+    return cams
 
 
 class DTU(RNGDataFlow):
@@ -94,6 +211,70 @@ class DTU(RNGDataFlow):
             assert cams.shape == (self.view_num, 2, 4, 4)
             self.count += 1
             yield [imgs, cams, depth_image]
+
+    @staticmethod
+    def make_test_data(data_dir, view_num, max_h, max_w, max_d, interval_scale):
+        """
+        the data_dir should be organized like:
+        * images
+        * cams
+        * pair.txt
+        :param data_dir:
+        :return:
+        """
+        dir_files = os.listdir(data_dir)
+        assert 'images' in dir_files and 'cams' in dir_files and 'pair.txt' in dir_files
+        sample_list = gen_test_input_sample_list(data_dir, view_num)
+        for data in sample_list:
+            imgs = []
+            cams = []
+
+            for view in range(view_num):
+                # read_image
+                # // [fixedTODO]: center image is left to augmentor or tf Graph
+                # // I have done it here
+                img = cv2.imread(data[2 * view])
+                # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                # load cam and do basic interval_scale
+                cam = Cam(data[2 * view + 1], max_d=max_d, interval_scale=interval_scale)
+                imgs.append(img)
+                cams.append(cam.get_mat_form())
+
+            logger.info('range: {} {} {} {}'.format(cams[0][1, 3, 0], cams[0][1, 3, 1], cams[0][1, 3, 2], cams[0][1, 3, 3]))
+
+            general_h_scale = -1.
+            general_w_scale = -1.
+            # 选取较大的scale的好处是，宁愿 crop 也不要 padding
+            for view in range(view_num):
+                h, w, _ = imgs[view]
+                height_scale = float(max_h) / h
+                width_scale = float(max_w) / w
+                general_h_scale = height_scale if height_scale > general_h_scale else general_h_scale
+                general_w_scale = width_scale if width_scale > general_w_scale else general_w_scale
+                assert height_scale < 1 and width_scale < 1, 'max_h, max_w shall be less than h, w'
+            resize_scale = general_h_scale if general_h_scale > general_w_scale else general_w_scale
+            logger.info('resize scale is %.2f' % resize_scale)
+
+            # first scale
+            imgs, cams = scale_mvs_input(imgs, cams, scale=resize_scale)
+
+            # then crop to fit the nn input
+            imgs, cams = crop_mvs_input(imgs, cams, max_h, max_w, base_image_size=8)
+
+            # then scale the cam and img, because the final resolution is not full-res
+            imgs, cams = scale_mvs_input(imgs, cams, scale=0.25)
+
+            ref_cam = cams[0]
+            depth_min, depth_interval, depth_max = Cam.get_depth_meta(ref_cam, 'depth_min', 'depth_interval', 'depth_max')
+            # view_num, h, w, 3
+            imgs = np.array(imgs)
+            # (view_num, )
+            cams = np.array(cams)
+            logger.info('d_min = %f, interval: %f, d_max = %f.' %
+                      (depth_min, depth_interval, depth_max))
+
+            assert cams.shape == (view_num, 2, 4, 4)
+            yield imgs, cams
 
 
 def gen_dtu_resized_path(dtu_data_folder, view_num, mode='train'):
@@ -200,28 +381,30 @@ if __name__ == "__main__":
     DTU_DATA_ROOT = '/home/yeeef/Desktop/dtu_training'
     """dataflow testing"""
     ds = DTU(DTU_DATA_ROOT, 3, 'train', 1.06, 192)
+    ds = BatchData(ds, 2, remainder=True)
     count = 0
-    for imgs, cams, depth_image in ds:
-        # print(point)
-        if count == 1420:
-            plt.figure()
-            print(imgs[0].shape)
-            
-            plt.subplot(1, 3, 1)
-            plt.imshow(imgs[0].astype('uint8'))
-            plt.subplot(1, 3, 2)
-            plt.imshow(imgs[1].astype('uint8'))
-            plt.subplot(1, 3, 3)
-            plt.imshow(imgs[2].astype('uint8'))
-            plt.show()
-            break
-            # for cam in cams:
-            #     depth_min, depth_interval, depth_num, depth_max = Cam.get_depth_meta(cam, 'depth_min', 'depth_interval',
-            #                                                                                            'depth_num',
-            #                                                                                             'depth_max')
-            #     depth_max = depth_min + (depth_num - 1) * depth_interval
-            #     print('{} {} {} {}'.format(depth_min, depth_interval, depth_num, depth_max))
-        count += 1
+    print(ds.size())
+    # for imgs, cams, depth_image in ds:
+    #     # print(point)
+    #     if count == 1420:
+    #         plt.figure()
+    #         print(imgs[0].shape)
+    #
+    #         plt.subplot(1, 3, 1)
+    #         plt.imshow(imgs[0].astype('uint8'))
+    #         plt.subplot(1, 3, 2)
+    #         plt.imshow(imgs[1].astype('uint8'))
+    #         plt.subplot(1, 3, 3)
+    #         plt.imshow(imgs[2].astype('uint8'))
+    #         plt.show()
+    #         break
+    #         # for cam in cams:
+    #         #     depth_min, depth_interval, depth_num, depth_max = Cam.get_depth_meta(cam, 'depth_min', 'depth_interval',
+    #         #                                                                                            'depth_num',
+    #         #                                                                                             'depth_max')
+    #         #     depth_max = depth_min + (depth_num - 1) * depth_interval
+    #         #     print('{} {} {} {}'.format(depth_min, depth_interval, depth_num, depth_max))
+    #     count += 1
         # if count >= 410:
         #     break
     # parallel = min(40, multiprocessing.cpu_count() // 2)  # assuming hyperthreading

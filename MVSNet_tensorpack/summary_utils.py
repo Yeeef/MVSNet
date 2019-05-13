@@ -1,6 +1,7 @@
 from tensorpack import *
 import tensorflow as tf
 
+
 def add_image_summary(x, name=None, collections=None):
     if name is None:
         name = x.op.name

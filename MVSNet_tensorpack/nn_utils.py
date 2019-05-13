@@ -268,6 +268,7 @@ def deconv3d_bn_relu(inputs, filters, kernel_size, strides, training, trainable,
 @layer_register(log_shape=True)
 def soft_argmin(regularized_cost_volume, depth_start, depth_end, depth_num, depth_interval, batch_size):
     with tf.variable_scope('soft_argmin'):
+        # batch_size =
         # b, d, h, w
         probability_volume = tf.nn.softmax(
             tf.scalar_mul(-1, regularized_cost_volume), axis=1, name='prob_volume')

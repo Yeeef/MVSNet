@@ -42,7 +42,24 @@ class Cam(object):
             self.depth_num = 1
             self.depth_interval = 1
 
-    # def get_list_form(self):
+    @staticmethod
+    def write_cam(cam_mat, out_path):
+        depth_min, depth_interval, depth_num, depth_max, extrinsic, intrinsic = \
+         Cam.get_depth_meta(cam_mat, 'depth_min', 'depth_interval', 'depth_num', 'depth_max', 'extrinsic', 'intrinsic')
+
+        write_buffer = []
+        write_buffer.append('extrinsic')
+        for row in extrinsic:
+            write_buffer.append(' '.join([str(item) for item in row]))
+        write_buffer.append('\nintrinsic')
+        for row in intrinsic:
+            write_buffer.append(' '.join([str(item) for item in row]))
+        write_buffer.append('\n%f %f %d %f' % (depth_min, depth_interval, depth_num, depth_max))
+        with open(out_path, 'w') as outfile:
+            for line in write_buffer:
+                outfile.write(line)
+                outfile.write('\n')
+
 
     @staticmethod
     def get_depth_meta(cam_mat, *queries):

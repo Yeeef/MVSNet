@@ -138,6 +138,7 @@ class MVSNet(ModelDesc):
 
             # shape of coarse_depth: b, 1, h/4, w/4
             # shape of prob_map: b, h/4, w/4, 1
+            # TODO: no need to pass batch_size as param
             coarse_depth, prob_map = soft_argmin('soft_argmin', regularized_cost_volume, depth_start, depth_end, self.depth_num,
                                        depth_interval, self.batch_size)
 
