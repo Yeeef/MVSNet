@@ -19,6 +19,8 @@ DEFAULT_PADDING = 'same'
 
 # lyf: elegant, beautiful
 # op is a func, layer_decorated is used to wrap / decorate the op
+
+
 def layer(op):
     """Decorator for composable network layers."""
 

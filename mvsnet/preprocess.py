@@ -109,6 +109,7 @@ def crop_mvs_input(images, cams, depth_image=None):
     else:
         return images, cams
 
+
 def mask_depth_image(depth_image, min_depth, max_depth):
     """ mask out-of-range pixel to zero """
     # print ('mask min max', min_depth, max_depth)
@@ -324,6 +325,7 @@ def gen_dtu_resized_path(dtu_data_folder, mode='training'):
                 sample_list.append(paths)
         
     return sample_list
+
 
 def gen_dtu_mvs_path(dtu_data_folder, mode='training'):
     """ generate data paths for dtu dataset """

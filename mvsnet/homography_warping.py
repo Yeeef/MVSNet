@@ -51,6 +51,7 @@ def get_homographies(left_cam, right_cam, depth_num, depth_start, depth_interval
 
     return homographies
 
+
 def get_homographies_inv_depth(left_cam, right_cam, depth_num, depth_start, depth_end):
 
     with tf.name_scope('get_homographies'):

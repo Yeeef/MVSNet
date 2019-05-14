@@ -83,13 +83,24 @@ def inference(images, cams, depth_num, depth_start, depth_interval, is_master_gp
 
     # image feature extraction    
     if is_master_gpu:
-        ref_tower = UNetDS2GN({'data': ref_image}, is_training=True, reuse=False)
+        if FLAGS.feature == 'unet':
+            ref_tower = UNetDS2GN({'data': ref_image}, is_training=True, reuse=False)
+        else:
+            ref_tower = UniNetDS2({'data': ref_image}, is_training=True, reuse=False)
     else:
-        ref_tower = UNetDS2GN({'data': ref_image}, is_training=True, reuse=True)
+        if FLAGS.feature == 'unet':
+            ref_tower = UNetDS2GN({'data': ref_image}, is_training=True, reuse=True)
+        else:
+            ref_tower = UniNetDS2({'data': ref_image}, is_training=True, reuse=True)
+
     view_towers = []
     for view in range(1, FLAGS.view_num):
         view_image = tf.squeeze(tf.slice(images, [0, view, 0, 0, 0], [-1, 1, -1, -1, -1]), axis=1)
-        view_tower = UNetDS2GN({'data': view_image}, is_training=True, reuse=True)
+        if FLAGS.feature == 'unet':
+            view_tower = UNetDS2GN({'data': view_image}, is_training=True, reuse=True)
+        else:
+            view_tower = UniNetDS2({'data': view_image}, is_training=True, reuse=True)
+
         view_towers.append(view_tower)
 
     # get all homographies
@@ -122,9 +133,13 @@ def inference(images, cams, depth_num, depth_start, depth_interval, is_master_gp
 
     # filtered cost volume, size of (B, D, H, W, 1)
     if is_master_gpu:
-        filtered_cost_volume_tower = RegNetUS0({'data': cost_volume}, is_training=True, reuse=False)
+        # filtered_cost_volume_tower = RegNetUS0({'data': cost_volume}, is_training=True, reuse=False)
+        filtered_cost_volume_tower = SimpleRegNetUS0({'data': cost_volume}, is_training=True, reuse=False)
+
     else:
-        filtered_cost_volume_tower = RegNetUS0({'data': cost_volume}, is_training=True, reuse=True)
+        # filtered_cost_volume_tower = RegNetUS0({'data': cost_volume}, is_training=True, reuse=True)
+        filtered_cost_volume_tower = SimpleRegNetUS0({'data': cost_volume}, is_training=True, reuse=True)
+
     filtered_cost_volume = tf.squeeze(filtered_cost_volume_tower.get_output(), axis=-1)
 
     # depth map by softArgmin
@@ -493,6 +508,7 @@ def depth_refine(init_depth_map, image, depth_num, depth_start, depth_interval, 
     norm_depth_map = norm_depth_tower.get_output()
 
     # denormalize depth map
+    # kinda like bn gamma and beta
     refined_depth_map = tf.multiply(norm_depth_map, depth_scale_mat) + depth_start_mat
 
     return refined_depth_map

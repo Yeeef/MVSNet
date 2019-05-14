@@ -69,22 +69,22 @@ def get_train_conf(model, args):
         EstimatedTimeLeft(),
         # SummaryGradient()
     ]
-    infs = [ScalarStats(names=['loss'], prefix='val')]
-    if nr_tower == 1:
-        # single-GPU inference with queue prefetch
-        callbacks.append(
-            InferenceRunner(
-                val_data,
-                infs)
-        )
-    else:
-        # multi-GPU inference (with mandatory queue prefetch)
-        callbacks.append(DataParallelInferenceRunner(
-            val_data, infs, list(range(nr_tower))))
+    # infs = [ScalarStats(names=['loss'], prefix='val')]
+    # if nr_tower == 1:
+    #     # single-GPU inference with queue prefetch
+    #     callbacks.append(
+    #         InferenceRunner(
+    #             val_data,
+    #             infs)
+    #     )
+    # else:
+    #     # multi-GPU inference (with mandatory queue prefetch)
+    #     callbacks.append(DataParallelInferenceRunner(
+    #         val_data, infs, list(range(nr_tower))))
     callbacks.extend([
         GPUUtilizationTracker(),
-        MinSaver('val_loss',
-                 filename='min_val_loss.tfmodel'),
+        # MinSaver('val_loss',
+        #          filename='min_val_loss.tfmodel'),
 
         # GraphProfiler(dump_tracing=True, dump_event=True)
 
@@ -97,10 +97,15 @@ def get_train_conf(model, args):
         callbacks=callbacks,
         extra_callbacks=[ProgressBar(names=['loss', 'less_one_accuracy', 'less_three_accuracy']),
                          MovingAverageSummary(),
-                         MergeAllSummaries(period=100 if steps_per_epoch > 100 else steps_per_epoch),
+                         MergeAllSummaries(period=500 if steps_per_epoch > 500 else steps_per_epoch),
                          RunUpdateOps()],
+        monitors=[
+            TFEventWriter(),
+            JSONWriter(),
+            ScalarPrinter(blacklist=['param-summary.*', 'SummaryGradient.*'])
+        ],
         steps_per_epoch=steps_per_epoch,
-        max_epoch=6,
+        max_epoch=5,
     )
 
 
@@ -110,44 +115,46 @@ def evaluate(model, sess_init, args):
     :return:
     """
     out_path = args.out
-    if not os.path.exists(out_path):
-        logger.warn(f'{out_path} does not exist, aumatically create for you')
-        os.makedirs(out_path)
-    else:
-        logger.warn(f'{out_path} exists, it will be overwritten, y or n?')
-        response = input()
-        if response != 'y':
-            logger.info(f'get {response} as answer, exit -1')
-            exit(-1)
-        else:
-            logger.info(f'{out_path} will be overwritten')
+    # if not os.path.exists(out_path):
+    #     logger.warn(f'{out_path} does not exist, aumatically create for you')
+    #     os.makedirs(out_path)
+    # else:
+    #     logger.warn(f'{out_path} exists, it will be overwritten, y or n?')
+    #     response = input()
+    #     if response != 'y':
+    #         logger.info(f'get {response} as answer, exit -1')
+    #         exit(-1)
+    #     else:
+    #         logger.info(f'{out_path} will be overwritten')
 
     pred_conf = PredictConfig(
         model=model,
         session_init=sess_init,
         input_names=['imgs', 'cams', 'gt_depth'],
-        output_names=['prob_map', 'coarse_depth', 'refine_depth', 'imgs', 'coarse_loss', 'refine_loss',
+        output_names=['prob_map', 'coarse_depth', 'refine_depth', 'imgs', 'loss',
                       'less_one_accuracy', 'less_three_accuracy']
     )
     ds_val = get_data(args, 'val')
-    pred_func = FeedfreePredictor(pred_conf, QueueInput(ds_val), device='/gpu:0')
+    logger.warn('val size: %d' % len(ds_val))
+    pred_func = FeedfreePredictor(pred_conf, QueueInput(ds_val))
     global_count = 0
     avg_loss = 0.
     avg_less_one_acc = 0.
     avg_less_three_acc = 0.
     ds_len = len(ds_val)
     for i in range(ds_len):
-        prob_map, coarse_depth, refine_depth, imgs, coarse_loss, refine_loss, less_one_accuracy, less_three_accuracy = pred_func()
+        prob_map, coarse_depth, refine_depth, imgs, loss, less_one_accuracy, less_three_accuracy = pred_func()
         batch_size, h, w, *_ = prob_map.shape
         ref_img = imgs[0]
-        assert ref_img.shape[2] == 3, ref_img.shape
-        for _ in range(batch_size):
-            plt.imsave(path.join(out_path, str(global_count) + '_prob.png'), prob_map, cmap='rainbow')
-            plt.imsave(path.join(out_path, str(global_count) + '_depth.png'), coarse_depth, cmap='rainbow')
-            plt.imsave(path.join(out_path, str(global_count) + '_rgb.png'), ref_img.astype('uint8'))
+        assert ref_img.shape[3] == 3, ref_img.shape
+        for j in range(batch_size):
+            # print(prob_map[j].shape)
+            # plt.imsave(path.join(out_path, str(global_count) + '_prob.png'), np.squeeze(prob_map[j]), cmap='rainbow')
+            # plt.imsave(path.join(out_path, str(global_count) + '_depth.png'), np.squeeze(coarse_depth[j]), cmap='rainbow')
+            # plt.imsave(path.join(out_path, str(global_count) + '_rgb.png'), np.squeeze(ref_img[j]).astype('uint8'))
 
             global_count += 1
-            avg_loss += 0.5 * (coarse_loss + refine_depth)
+            avg_loss += loss
             avg_less_one_acc += less_one_accuracy
             avg_less_three_acc += less_three_accuracy
     avg_loss /= ds_len
@@ -223,7 +230,7 @@ def mvsnet_main():
     parser.add_argument('--load', help='load a model for training or evaluation')
     parser.add_argument('--exp_name', help='model ckpt name')
     parser.add_argument('--gpu', help='comma separated list of GPU(s) to use.')
-    parser.add_argument('--mode', '-m', help='train / val / test', default='train', choices=['train', 'val', 'test', 'fake'])
+    parser.add_argument('--mode', '-m', help='train / val / test', choices=['train', 'val', 'test', 'fake'])
     parser.add_argument('--out', default='./',
                         help='output path for evaluation and test, default to current folder')
     parser.add_argument('--batch', default=1, type=int, help="Batch size per tower.")
@@ -243,7 +250,7 @@ def mvsnet_main():
     if args.gpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
-    if args.mode == 'train' or 'fake':
+    if args.mode == 'train' or args.mode == 'fake':
 
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
                        branch_function=feature_branch_function, is_refine=args.refine)
@@ -278,6 +285,7 @@ def mvsnet_main():
     elif args.mode == 'val':
         assert args.load, 'in eval mode, you have to specify a trained model'
         assert args.out, 'in eval mode, you have to specify the output dir path'
+        logger.set_logger_dir(args.out)
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
                        branch_function=feature_branch_function, is_refine=args.refine)
         sess_init = get_model_loader(args.load)

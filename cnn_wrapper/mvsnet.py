@@ -111,6 +111,20 @@ class UNetDS2GN(Network):
 ###################### 3D CNNs cost volume regularization network ######################
 ########################################################################################
 
+
+class SimpleRegNetUS0(Network):
+    def setup(self):
+        print('3D with 8 filters')
+        base_filter = 8
+        (self.feed('data')
+         # .conv_bn(3, base_filter * 2, 2, center=True, scale=True, name='3dconv1_0')
+         # .conv_bn(3, base_filter * 4, 2, center=True, scale=True, name='3dconv2_0')
+         # .deconv_bn(3, base_filter * 2, 2, center=True, scale=True, name='3dconv5_0')
+         # .deconv_bn(3, base_filter, 2, center=True, scale=True, name='3dconv6_0')
+         .conv(3, 1, 1, biased=False, relu=False, name='3dconv6_2')
+         )
+
+
 class RegNetUS0(Network):
     """network for regularizing 3D cost volume in a encoder-decoder style. Keeping original size."""
 

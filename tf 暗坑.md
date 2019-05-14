@@ -18,4 +18,13 @@
 
 - cannot import name estimator
   - purge all tf versions
-  - resinstall compatibel tensorflow
+  - reinstall compatible tensorflow
+  
+## on the importance of scope
+
+渐渐明白 name_scope 存在的意义了，我们希望 tensorboard 里的图片更好看，同时也希望 get_variable 的名字能够更加简短, 我之前
+是通过 `tf.identity` 实现的，不知道是否会造成多余的复制？
+
+## tf.identity
+
+- [stackoverflow](https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for)

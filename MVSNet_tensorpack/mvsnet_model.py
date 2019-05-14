@@ -142,6 +142,8 @@ class MVSNet(ModelDesc):
             coarse_depth, prob_map = soft_argmin('soft_argmin', regularized_cost_volume, depth_start, depth_end, self.depth_num,
                                        depth_interval, self.batch_size)
 
+
+
             # shape of refine_depth: b, 1, h/4, w/4
             if self.is_refine:
                 refine_depth = depth_refinement(coarse_depth, ref_img, depth_start, depth_end)
@@ -153,8 +155,11 @@ class MVSNet(ModelDesc):
                 # loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval, 'coarse_loss')
                 loss_refine, less_one_accuracy, less_three_accuracy = mvsnet_regression_loss(gt_depth, refine_depth,
                                                                                    depth_interval, 'refine_loss')
-                loss_coarse = tf.identity(loss_refine, name='coarse_loss')
+                loss_coarse = tf.identity(loss_refine, name='loss_coarse')
 
+            coarse_depth = tf.identity(coarse_depth, 'coarse_depth')
+            refine_depth = tf.identity(refine_depth, 'refine_depth')
+            prob_map = tf.identity(prob_map, 'prob_map')
             loss = tf.add(loss_refine / 2, loss_coarse * self.lambda_ / 2, name='loss')
             less_one_accuracy = tf.identity(less_one_accuracy, name='less_one_accuracy')
             less_three_accuracy = tf.identity(less_three_accuracy, name='less_three_accuracy')

@@ -174,7 +174,7 @@ class DTU(RNGDataFlow):
         #     return 882
 
     def __iter__(self):
-        if self.shuffle is not None:
+        if self.shuffle:
             self.rng.shuffle(self.sample_list)
         for data in self.sample_list:
             imgs = []
@@ -299,7 +299,7 @@ def gen_dtu_resized_path(dtu_data_folder, view_num, mode='train'):
                     121, 122, 123, 124, 125, 126, 127, 128]
     training_set = training_set[:]
     validation_set = [3, 5, 17, 21, 28, 35, 37, 38, 40, 43, 56, 59, 66, 67, 82, 86, 106, 117]
-    validation_set = validation_set[:1]
+    validation_set = validation_set[:]
     logger.warn('num of scans in training_set: {}'.format(len(training_set)))
     logger.warn('num of scans in val_set: {}'.format(len(validation_set)))
 

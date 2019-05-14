@@ -56,12 +56,13 @@ tf.app.flags.DEFINE_bool('adaptive_scaling', True,
 # network architecture
 tf.app.flags.DEFINE_string('regularization', 'GRU',
                            """Regularization method, including '3DCNNs' and 'GRU'""")
-tf.app.flags.DEFINE_boolean('refinement', False,
+tf.app.flags.DEFINE_boolean('refinement', True,
                            """Whether to apply depth map refinement for MVSNet""")
 tf.app.flags.DEFINE_bool('inverse_depth', True,
                            """Whether to apply inverse depth for R-MVSNet""")
 
 FLAGS = tf.app.flags.FLAGS
+
 
 class MVSGenerator:
     """ data generator class, tf only accept generator without param """
