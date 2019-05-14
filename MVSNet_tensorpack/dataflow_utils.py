@@ -225,6 +225,7 @@ class DTU(RNGDataFlow):
         dir_files = os.listdir(data_dir)
         assert 'images' in dir_files and 'cams' in dir_files and 'pair.txt' in dir_files
         sample_list = gen_test_input_sample_list(data_dir, view_num)
+        logger.info('sample_list: %s' % sample_list)
         for data in sample_list:
             imgs = []
             cams = []
@@ -234,6 +235,8 @@ class DTU(RNGDataFlow):
                 # // [fixedTODO]: center image is left to augmentor or tf Graph
                 # // I have done it here
                 img = cv2.imread(data[2 * view])
+                # print(img.shape)
+
                 # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 # load cam and do basic interval_scale
                 cam = Cam(data[2 * view + 1], max_d=max_d, interval_scale=interval_scale)
@@ -246,7 +249,8 @@ class DTU(RNGDataFlow):
             general_w_scale = -1.
             # 选取较大的scale的好处是，宁愿 crop 也不要 padding
             for view in range(view_num):
-                h, w, _ = imgs[view]
+                # print(imgs[view].shape)
+                h, w, _ = imgs[view].shape
                 height_scale = float(max_h) / h
                 width_scale = float(max_w) / w
                 general_h_scale = height_scale if height_scale > general_h_scale else general_h_scale

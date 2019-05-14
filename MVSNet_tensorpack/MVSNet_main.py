@@ -184,17 +184,17 @@ def test(model, sess_init, args):
     max_d = args.max_d
     interval_scale = args.interval_scale
     logger.info('data_dir: %s, out_dir: %s' % (data_dir, out_dir))
-    if not os.path.exists(out_dir):
-        logger.warn(f'{out_dir} does not exist, aumatically create for you')
-        os.makedirs(out_dir)
-    else:
-        logger.warn(f'{out_dir} exists, it will be overwritten, y or n?')
-        response = input()
-        if response != 'y':
-            logger.info(f'get {response} as answer, exit -1')
-            exit(-1)
-        else:
-            logger.info(f'{out_dir} will be overwritten')
+    # if not os.path.exists(out_dir):
+    #     logger.warn(f'{out_dir} does not exist, aumatically create for you')
+    #     os.makedirs(out_dir)
+    # else:
+    #     logger.warn(f'{out_dir} exists, it will be overwritten, y or n?')
+    #     response = input()
+    #     if response != 'y':
+    #         logger.info(f'get {response} as answer, exit -1')
+    #         exit(-1)
+    #     else:
+    #         logger.info(f'{out_dir} will be overwritten')
     pred_conf = PredictConfig(
         model=model,
         session_init=sess_init,
@@ -203,6 +203,7 @@ def test(model, sess_init, args):
     )
     # create imgs and cams data
     data_points = list(DTU.make_test_data(data_dir, view_num, max_h, max_w, max_d, interval_scale))
+    logger.info('len of data_points: %d' % len(data_points))
     pred_func = OfflinePredictor(pred_conf)
     batch_prob_map, batch_coarse_depth, batch_refine_depth = pred_func(data_points)
 
@@ -235,6 +236,8 @@ def mvsnet_main():
                         help='output path for evaluation and test, default to current folder')
     parser.add_argument('--batch', default=1, type=int, help="Batch size per tower.")
     parser.add_argument('--max_d', help='depth num for MVSNet', required=True, type=int)
+    parser.add_argument('--max_h', help='depth num for MVSNet', required=True, type=int)
+    parser.add_argument('--max_w', help='depth num for MVSNet', required=True, type=int)
     parser.add_argument('--interval_scale', required=True, type=float)
     parser.add_argument('--view_num', required=True, type=int)
     parser.add_argument('--refine', default=False)
@@ -298,6 +301,7 @@ def mvsnet_main():
         assert args.load, 'in eval mode, you have to specify a trained model'
         assert args.out, 'in eval mode, you have to specify the output dir path'
         assert args.data, 'in eval mode, you have to specify the data dir path'
+        logger.set_logger_dir(args.out)
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
                        branch_function=feature_branch_function, is_refine=args.refine)
         sess_init = get_model_loader(args.load)

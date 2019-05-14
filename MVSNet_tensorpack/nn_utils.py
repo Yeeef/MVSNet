@@ -43,8 +43,7 @@ def unet_feature_extraction_branch(img):
     :return: l
     """
     with argscope([Conv2D, Conv2DTranspose], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
-                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
-            argscope([mvsnet_gn], data_format='channels_first', epsilon=1e-5):
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'):
         with tf.variable_scope('feature_extraction_branch', reuse=tf.AUTO_REUSE):
             base_filter = 8
             l1_0 = Conv2D('2dconv1_0', img, base_filter*2, 3, strides=2, activation=mvsnet_gn_relu)
@@ -169,7 +168,7 @@ def simple_cost_volume_regularization(cost_volume, training, trainable):
                   kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
          argscope([tf.layers.conv3d_transpose], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
                   kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
-         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99, axis=1):  # axis =1 for channels_first
+         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99):
         base_filter = 8
         with tf.variable_scope('cost_volume_regularization'):
             with rename_tflayer_get_variable():
@@ -192,7 +191,7 @@ def cost_volume_regularization(cost_volume, training, trainable):
                   kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
          argscope([tf.layers.conv3d_transpose], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
                   kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
-         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99, axis=1):  # axis =1 for channels_first
+         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99):
         base_filter = 8
         with tf.variable_scope('cost_volume_regularization'):
             with rename_tflayer_get_variable():
@@ -356,17 +355,22 @@ def mvsnet_gn(x, group=32, group_channel=8, epsilon=1e-5,
               gamma_initializer=tf.constant_initializer(1.)):
     assert len(x.get_shape().as_list()) == 4, len(x.get_shape().as_list())
     assert data_format in ['channels_first', 'channels_last'], data_format
+
     if data_format == 'channels_first':
         _, c, h, w = x.get_shape().as_list()
+
+        logger.info('fuck you fuck you! %s' % data_format)
     else:
         _, h, w, c = x.get_shape().as_list()
         x = tf.transpose(x, [0, 3, 1, 2])
+        # assert c < 100, c
     if channel_wise:
         g = tf.cast(tf.maximum(1, c // group_channel), tf.int32)
     else:
         g = tf.cast(tf.minimum(group, c), tf.int32)
 
     # normalization
+    # tf.Print()
     x = tf.reshape(x, (-1, g, c // g, h, w))
     new_shape = [1, c, 1, 1]
     mean, var = tf.nn.moments(x, [2, 3, 4], keep_dims=True)
@@ -457,14 +461,3 @@ def GroupNorm(x, group, gamma_initializer=tf.constant_initializer(1.)):
 
     out = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-5, name='output')
     return tf.reshape(out, orig_shape, name='output')
-
-
-# def convnormrelu(x, name, chan):
-#     x = Conv2D(name, x, chan, 3)
-#     if args.norm == 'bn':
-#         x = BatchNorm(name + '_bn', x)
-#     elif args.norm == 'gn':
-#         with tf.variable_scope(name + '_gn'):
-#             x = GroupNorm(x, 32)
-#     x = tf.nn.relu(x, name=name + '_relu')
-#     return x

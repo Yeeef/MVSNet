@@ -116,7 +116,8 @@ class MVSNet(ModelDesc):
 
         with argscope([tf.layers.conv3d, tf.layers.conv3d_transpose, mvsnet_gn,
                        Conv2D, Conv2DTranspose, MaxPooling, AvgPooling, BatchNorm],
-                      data_format=self.data_format):
+                      data_format=self.data_format),\
+             argscope(tf.layers.batch_normalization, axis=-1):
             # feature extraction
             # shape: b, view_num, c, h/4, w/4
             feature_maps = feature_extraction_net(imgs, self.branch_function)
