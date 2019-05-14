@@ -59,8 +59,8 @@ def center_image(imgs):
 
 class MVSNet(ModelDesc):
 
-    height = 512
-    width = 640
+    # height = 512
+    # width = 640
     view_num = 3
     data_format = 'channels_last'
     lambda_ = 1.
@@ -82,7 +82,7 @@ class MVSNet(ModelDesc):
     """Learning rate decay rate"""
     decay_rate = 0.9
 
-    def __init__(self, depth_num, bn_training, bn_trainable, batch_size, branch_function, is_refine):
+    def __init__(self, depth_num, bn_training, bn_trainable, batch_size, branch_function, is_refine, height, width):
         super(MVSNet, self).__init__()
         # self.is_training = is_training
         self.bn_training = bn_training
@@ -91,6 +91,8 @@ class MVSNet(ModelDesc):
         self.batch_size = batch_size
         self.branch_function = branch_function
         self.is_refine = is_refine
+        self.height = height
+        self.width = width
 
     def inputs(self):
         return [

@@ -44,6 +44,7 @@ def unet_feature_extraction_branch(img):
     """
     with argscope([Conv2D, Conv2DTranspose], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
                   kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'):
+         # argscope([mvsnet_gn], data_format='channels_first'):
         with tf.variable_scope('feature_extraction_branch', reuse=tf.AUTO_REUSE):
             base_filter = 8
             l1_0 = Conv2D('2dconv1_0', img, base_filter*2, 3, strides=2, activation=mvsnet_gn_relu)

@@ -266,7 +266,8 @@ class DTU(RNGDataFlow):
             imgs, cams = crop_mvs_input(imgs, cams, max_h, max_w, base_image_size=8)
 
             # then scale the cam and img, because the final resolution is not full-res
-            imgs, cams = scale_mvs_input(imgs, cams, scale=0.25)
+            cams = [scale_camera(cam, 0.25) for cam in cams]
+            # imgs, cams = scale_mvs_input(imgs, cams, scale=0.25)
 
             ref_cam = cams[0]
             depth_min, depth_interval, depth_max = Cam.get_depth_meta(ref_cam, 'depth_min', 'depth_interval', 'depth_max')

@@ -184,17 +184,7 @@ def test(model, sess_init, args):
     max_d = args.max_d
     interval_scale = args.interval_scale
     logger.info('data_dir: %s, out_dir: %s' % (data_dir, out_dir))
-    # if not os.path.exists(out_dir):
-    #     logger.warn(f'{out_dir} does not exist, aumatically create for you')
-    #     os.makedirs(out_dir)
-    # else:
-    #     logger.warn(f'{out_dir} exists, it will be overwritten, y or n?')
-    #     response = input()
-    #     if response != 'y':
-    #         logger.info(f'get {response} as answer, exit -1')
-    #         exit(-1)
-    #     else:
-    #         logger.info(f'{out_dir} will be overwritten')
+
     pred_conf = PredictConfig(
         model=model,
         session_init=sess_init,
@@ -203,25 +193,56 @@ def test(model, sess_init, args):
     )
     # create imgs and cams data
     data_points = list(DTU.make_test_data(data_dir, view_num, max_h, max_w, max_d, interval_scale))
-    logger.info('len of data_points: %d' % len(data_points))
+    # model.batch_size = len(data_points)
     pred_func = OfflinePredictor(pred_conf)
-    batch_prob_map, batch_coarse_depth, batch_refine_depth = pred_func(data_points)
 
-    for i in range(len(batch_prob_map)):
-        imgs, cams = data_points[i]
-        prob_map, coarse_depth, refine_depth = batch_prob_map[i], batch_coarse_depth[i], batch_refine_depth[i]
+    # TODO: after release training, finish this
+    # imgs = [dp[0] for dp in data_points]
+    # cams = [dp[1] for dp in data_points]
+    # batch_prob_map, batch_coarse_depth, batch_refine_depth = pred_func(imgs, cams)
+    #
+    # for i in range(len(batch_prob_map)):
+    #     imgs, cams = data_points[i]
+    #     prob_map, coarse_depth, refine_depth = batch_prob_map[i], batch_coarse_depth[i], batch_refine_depth[i]
+    #     ref_img, ref_cam = imgs[0], cams[0]
+    #     rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
+    #     plt.imsave(path.join(out_dir, str(i) + '_prob.png'), np.squeeze(prob_map), cmap='rainbow')
+    #     plt.imsave(path.join(out_dir, str(i) + '_depth.png'), np.squeeze(coarse_depth), cmap='rainbow')
+    #     plt.imsave(path.join(out_dir, str(i) + '_rgb.png'), np.squeeze(rgb.astype('uint8')))
+    #     Cam.write_cam(ref_cam, path.join(out_dir, str(i) + '_cam.txt'))
+    #
+    #     intrinsic, *_ = Cam.get_depth_meta(ref_cam, 'intrinsic')
+    #     print(intrinsic)
+    #     ma = np.ma.masked_equal(coarse_depth, 0.0, copy=False)
+    #     logger.info('value range: %f -> %f' % (ma.min(), ma.max()))
+    #     downsample_rgb = cv2.resize(rgb, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR)
+    #     depth_point_list = PointCloudGenerator.gen_3d_point_with_rgb(coarse_depth, downsample_rgb, intrinsic)
+    #     PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % str(i)))
+    logger.info('len of data_points: %d' % len(data_points))
+
+    for idx, dp in enumerate(data_points):
+
+        imgs, cams = dp
+        batch_prob_map, batch_coarse_depth, batch_refine_depth = pred_func(np.expand_dims(imgs, 0), np.expand_dims(cams, 0))
+        logger.info('shape of batch_prob_map: {}'.format(batch_prob_map.shape))
+        prob_map, coarse_depth, refine_depth = np.squeeze(batch_prob_map), np.squeeze(batch_coarse_depth), np.squeeze(batch_refine_depth)
         ref_img, ref_cam = imgs[0], cams[0]
-        rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
-        plt.imsave(path.join(out_dir, str(i) + '_prob.png'), prob_map, cmap='rainbow')
-        plt.imsave(path.join(out_dir, str(i) + '_depth.png'), coarse_depth, cmap='rainbow')
-        plt.imsave(path.join(out_dir, str(i) + '_rgb.png'), rgb.astype('uint8'))
-        Cam.write_cam(ref_cam, path.join(out_dir, str(i) + '_cam.txt'))
+        logger.info('shape of ref_img: {}'.format(ref_img.shape))
+        logger.info('shape of imgs: {}'.format(imgs.shape))
 
-        intrinsic = Cam.get_depth_meta(ref_cam, 'intrinsic')
+        rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
+        plt.imsave(path.join(out_dir, str(idx) + '_prob.png'), prob_map, cmap='rainbow')
+        plt.imsave(path.join(out_dir, str(idx) + '_depth.png'), coarse_depth, cmap='rainbow')
+        plt.imsave(path.join(out_dir, str(idx) + '_rgb.png'), refine_depth.astype('uint8'))
+        Cam.write_cam(ref_cam, path.join(out_dir, str(idx) + '_cam.txt'))
+
+        intrinsic, *_ = Cam.get_depth_meta(ref_cam, 'intrinsic')
+        print(intrinsic)
         ma = np.ma.masked_equal(coarse_depth, 0.0, copy=False)
         logger.info('value range: %f -> %f' % (ma.min(), ma.max()))
-        depth_point_list = PointCloudGenerator.gen_3d_point_with_rgb(coarse_depth, rgb, intrinsic)
-        PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % str(i)))
+        downsample_rgb = cv2.resize(rgb, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR)
+        depth_point_list = PointCloudGenerator.gen_3d_point_with_rgb(coarse_depth, downsample_rgb, intrinsic)
+        PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % str(idx)))
 
 
 def mvsnet_main():
@@ -256,7 +277,8 @@ def mvsnet_main():
     if args.mode == 'train' or args.mode == 'fake':
 
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
-                       branch_function=feature_branch_function, is_refine=args.refine)
+                       branch_function=feature_branch_function, is_refine=args.refine, height=args.max_h,
+                       width=args.max_w)
 
         if args.exp_name is None:
             if not args.refine:
@@ -290,7 +312,8 @@ def mvsnet_main():
         assert args.out, 'in eval mode, you have to specify the output dir path'
         logger.set_logger_dir(args.out)
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
-                       branch_function=feature_branch_function, is_refine=args.refine)
+                       branch_function=feature_branch_function, is_refine=args.refine, height=args.max_h,
+                       width=args.max_w)
         sess_init = get_model_loader(args.load)
         avg_loss, avg_less_three_acc, avg_less_one_acc = evaluate(model, sess_init, args)
         logger.info(f'val loss: {avg_loss}')
@@ -303,7 +326,8 @@ def mvsnet_main():
         assert args.data, 'in eval mode, you have to specify the data dir path'
         logger.set_logger_dir(args.out)
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
-                       branch_function=feature_branch_function, is_refine=args.refine)
+                       branch_function=feature_branch_function, is_refine=args.refine, height=args.max_h,
+                       width=args.max_w)
         sess_init = get_model_loader(args.load)
         test(model, sess_init, args)
 

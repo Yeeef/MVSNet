@@ -28,3 +28,7 @@
 ## tf.identity
 
 - [stackoverflow](https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for)
+
+## tf.layers.batch_normalization
+
+一定要注意 axis 的设置
