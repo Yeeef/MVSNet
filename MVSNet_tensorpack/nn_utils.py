@@ -6,8 +6,8 @@ from tensorpack.utils import logger
 from tensorpack.tfutils.collection import *
 
 
-__all__ = ['feature_extraction_net', 'warping_layer', 'cost_volume_regularization', 'soft_argmin', 'depth_refinement',
-           ]
+# __all__ = ['feature_extraction_net', 'warping_layer', 'cost_volume_regularization', 'soft_argmin', 'depth_refinement',
+#            ]
 
 
 def uni_feature_extraction_branch(img):
@@ -43,8 +43,8 @@ def unet_feature_extraction_branch(img):
     :return: l
     """
     with argscope([Conv2D, Conv2DTranspose], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
-                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
-            argscope([mvsnet_gn], data_format='channels_first', epsilon=1e-5):
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'):
+         # argscope([mvsnet_gn], data_format='channels_first'):
         with tf.variable_scope('feature_extraction_branch', reuse=tf.AUTO_REUSE):
             base_filter = 8
             l1_0 = Conv2D('2dconv1_0', img, base_filter*2, 3, strides=2, activation=mvsnet_gn_relu)
@@ -68,22 +68,22 @@ def unet_feature_extraction_branch(img):
             l4_2 = Conv2D('2dconv4_2', l4_1, base_filter*16, 3, strides=1, activation=mvsnet_gn_relu)
             l5_0 = Conv2DTranspose('2dconv5_0', l4_2, base_filter*8, 3, strides=2, activation=mvsnet_gn_relu)
 
-            concat5_0 = tf.concat((l5_0, l3_2), axis=1, name='2dconcat5_0')
+            concat5_0 = tf.concat((l5_0, l3_2), axis=3, name='2dconcat5_0')
             l5_1 = Conv2D('2dconv5_1', concat5_0, base_filter*8, 3, strides=1, activation=mvsnet_gn_relu)
             l5_2 = Conv2D('2dconv5_2', l5_1, base_filter*8, 3, strides=1, activation=mvsnet_gn_relu)
             l6_0 = Conv2DTranspose('2dconv6_0', l5_2, base_filter*4, 3, strides=2, activation=mvsnet_gn_relu)
 
-            concat6_0 = tf.concat((l6_0, l2_2), axis=1, name='2dconcat6_0')
+            concat6_0 = tf.concat((l6_0, l2_2), axis=3, name='2dconcat6_0')
             l6_1 = Conv2D('2dconv6_1', concat6_0, base_filter*4, 3, strides=1, activation=mvsnet_gn_relu)
             l6_2 = Conv2D('2dconv6_2', l6_1, base_filter*4, 3, strides=1, activation=mvsnet_gn_relu)
             l7_0 = Conv2DTranspose('2dconv7_0', l6_2, base_filter*2, 3, strides=2, activation=mvsnet_gn_relu)
 
-            concat7_0 = tf.concat((l7_0, l1_2), axis=1, name='2dconcat7_0')
+            concat7_0 = tf.concat((l7_0, l1_2), axis=3, name='2dconcat7_0')
             l7_1 = Conv2D('2dconv7_1', concat7_0, base_filter*2, 3, strides=1, activation=mvsnet_gn_relu)
             l7_2 = Conv2D('2dconv7_2', l7_1, base_filter*2, 3, strides=1, activation=mvsnet_gn_relu)
             l8_0 = Conv2DTranspose('2dconv8_0', l7_2, base_filter, 3, strides=2, activation=mvsnet_gn_relu)
 
-            concat8_0 = tf.concat((l8_0, l0_2), axis=1, name='2dconcat8_0')
+            concat8_0 = tf.concat((l8_0, l0_2), axis=3, name='2dconcat8_0')
             l8_1 = Conv2D('2dconv8_1', concat8_0, base_filter, 3, strides=1, activation=mvsnet_gn_relu)
             l8_2 = Conv2D('2dconv8_2', l8_1, base_filter, 3, strides=1, activation=mvsnet_gn_relu)
 
@@ -122,7 +122,7 @@ def feature_extraction_net(imgs, branch_function):
         for i in range(1, view_num):
             feature_map = branch_function(imgs[:, i])
             feature_maps.append(feature_map)
-            # transpose is aiming at swap the position of channel and view_num
+            # transpose is aiming at swap the position of batch and view_num
     feature_maps = tf.transpose(feature_maps, [1, 0, 2, 3, 4], name='feature_maps')
     return feature_maps  # shape: batch, view_num, c, h, w
 
@@ -139,6 +139,8 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
     """
     with tf.variable_scope('warping_layer'):
         _, view_num, c, h, w = feature_maps.get_shape().as_list()
+        _, view_num, h, w, c = feature_maps.get_shape().as_list()
+
         _, cam_num, *_ = cams.get_shape().as_list()
         assert view_num == cam_num, 'view num: {} conflicts with cam num: {}'.format(view_num, cam_num)
         
@@ -151,7 +153,8 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
         for view in range(1, view_num):
             # view_cam = cams[:, view]
             view_cam = tf.squeeze(tf.slice(cams, [0, view, 0, 0, 0], [-1, 1, 2, 4, 4]), axis=1)
-            homographies = get_homographies(ref_cam, view_cam, depth_num, depth_start, depth_interval)
+            homographies = get_homographies(ref_cam, view_cam, depth_num=depth_num, depth_start=depth_start,
+                                                    depth_interval=depth_interval)
             view_homographies.append(homographies)
         
         # shape of feature_map: b, c, h, w
@@ -161,13 +164,35 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
     return cost_volume
 
 
+def simple_cost_volume_regularization(cost_volume, training, trainable):
+    with argscope([tf.layers.conv3d], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
+         argscope([tf.layers.conv3d_transpose], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
+         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99):
+        base_filter = 8
+        with tf.variable_scope('cost_volume_regularization'):
+            with rename_tflayer_get_variable():
+                # l1_0 = conv3d_bn_relu(cost_volume, base_filter * 2, 3, strides=2, training=training,
+                #                       trainable=trainable,
+                #                       name='3dconv1_0')
+                # l2_0 = conv3d_bn_relu(l1_0, base_filter * 4, 3, 2, training, trainable, '3dconv2_0')
+                # l5_0 = deconv3d_bn_relu(l2_0, base_filter * 2, 3, 2, training, trainable, name='3dconv5_0')
+                # l6_0 = deconv3d_bn_relu(l5_0, base_filter, 3, 2, training, trainable, name='3dconv6_0')
+                l6_2 = tf.layers.conv3d(cost_volume, 1, 3, strides=1, activation=None, name='3dconv6_2')
+
+                regularized_cost_volume = tf.squeeze(l6_2, axis=4, name='regularized_cost_volume')
+
+    return regularized_cost_volume
+
+
 def cost_volume_regularization(cost_volume, training, trainable):
 
     with argscope([tf.layers.conv3d], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
                   kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
          argscope([tf.layers.conv3d_transpose], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
                   kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
-         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99, axis=1):  # axis =1 for channels_first
+         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99):
         base_filter = 8
         with tf.variable_scope('cost_volume_regularization'):
             with rename_tflayer_get_variable():
@@ -208,11 +233,12 @@ def cost_volume_regularization(cost_volume, training, trainable):
                 l6_1 = tf.add(l6_0, l0_1, name='3dconv6_1')
                 
                 # shape of l6_2: b, 1, d, h, w
-                # l6_2 = tf.layers.conv3d(l6_1, 1, 3, strides=1, activation=None, name='3dconv6_2')
-                l6_2 = conv3d_bn_relu(l6_1, 1, 3, 1, training, trainable, name='3dconv6_2')
+                l6_2 = tf.layers.conv3d(l6_1, 1, 3, strides=1, activation=None, name='3dconv6_2')
+                # l6_2 = conv3d_bn_relu(l6_1, 1, 3, 1, training, trainable, name='3dconv6_2')
+                # l6_2 = tf.layers.conv3d(l6_1, 1, 3, 1, training, trainable, name='3dconv6_2')
 
                 # shape: b, d, h, w
-                regularized_cost_volume = tf.squeeze(l6_2, axis=1, name='regularized_cost_volume')
+                regularized_cost_volume = tf.squeeze(l6_2, axis=4, name='regularized_cost_volume')
 
     return regularized_cost_volume
 
@@ -242,6 +268,7 @@ def deconv3d_bn_relu(inputs, filters, kernel_size, strides, training, trainable,
 @layer_register(log_shape=True)
 def soft_argmin(regularized_cost_volume, depth_start, depth_end, depth_num, depth_interval, batch_size):
     with tf.variable_scope('soft_argmin'):
+        # batch_size =
         # b, d, h, w
         probability_volume = tf.nn.softmax(
             tf.scalar_mul(-1, regularized_cost_volume), axis=1, name='prob_volume')
@@ -257,10 +284,11 @@ def soft_argmin(regularized_cost_volume, depth_start, depth_end, depth_num, dept
         soft_2d = tf.reshape(tf.stack(soft_2d, axis=0), [volume_shape[0], volume_shape[1], 1, 1])
         soft_4d = tf.tile(soft_2d, [1, 1, volume_shape[2], volume_shape[3]])
         # shape: (b, 1, h, w)
-        estimated_depth_map = tf.reduce_sum(soft_4d * probability_volume, axis=1, keep_dims=True, name='coarse_depth')
+        estimated_depth_map = tf.reduce_sum(soft_4d * probability_volume, axis=1, name='coarse_depth')
         # # shape: (b, 1, h, w)
         # estimated_depth_map = tf.expand_dims(estimated_depth_map, axis=1)
         # shape of prob_map: b, h, w, 1
+        estimated_depth_map = tf.expand_dims(estimated_depth_map, axis=3)
         prob_map = get_propability_map(probability_volume, estimated_depth_map, depth_start, depth_interval)
     return estimated_depth_map, prob_map
 
@@ -323,18 +351,27 @@ def depth_refinement_net(coarse_depth, img):
 
 @layer_register(log_shape=True)
 def mvsnet_gn(x, group=32, group_channel=8, epsilon=1e-5,
-              channel_wise=True, data_format='channels_first',
+              channel_wise=True, data_format='channels_last',
               beta_initializer=tf.constant_initializer(),
               gamma_initializer=tf.constant_initializer(1.)):
     assert len(x.get_shape().as_list()) == 4, len(x.get_shape().as_list())
-    assert data_format == 'channels_first', 'currently only support NCHW but not {}'.format(data_format)
-    _, c, h, w = x.get_shape().as_list()
+    assert data_format in ['channels_first', 'channels_last'], data_format
+
+    if data_format == 'channels_first':
+        _, c, h, w = x.get_shape().as_list()
+
+        logger.info('fuck you fuck you! %s' % data_format)
+    else:
+        _, h, w, c = x.get_shape().as_list()
+        x = tf.transpose(x, [0, 3, 1, 2])
+        # assert c < 100, c
     if channel_wise:
         g = tf.cast(tf.maximum(1, c // group_channel), tf.int32)
     else:
         g = tf.cast(tf.minimum(group, c), tf.int32)
 
     # normalization
+    # tf.Print()
     x = tf.reshape(x, (-1, g, c // g, h, w))
     new_shape = [1, c, 1, 1]
     mean, var = tf.nn.moments(x, [2, 3, 4], keep_dims=True)
@@ -345,6 +382,8 @@ def mvsnet_gn(x, group=32, group_channel=8, epsilon=1e-5,
     x = (x - mean) / tf.sqrt(var + epsilon)
     x = tf.reshape(x, [-1, c, h, w]) * gamma + beta
 
+    if data_format == 'channels_last':
+        x = tf.transpose(x, [0, 2, 3, 1])
     return x
 
 
@@ -423,14 +462,3 @@ def GroupNorm(x, group, gamma_initializer=tf.constant_initializer(1.)):
 
     out = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-5, name='output')
     return tf.reshape(out, orig_shape, name='output')
-
-
-# def convnormrelu(x, name, chan):
-#     x = Conv2D(name, x, chan, 3)
-#     if args.norm == 'bn':
-#         x = BatchNorm(name + '_bn', x)
-#     elif args.norm == 'gn':
-#         with tf.variable_scope(name + '_gn'):
-#             x = GroupNorm(x, 32)
-#     x = tf.nn.relu(x, name=name + '_relu')
-#     return x

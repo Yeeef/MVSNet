@@ -59,10 +59,14 @@ tf.app.flags.DEFINE_float('interval_scale', 1.06,
 # network architectures
 tf.app.flags.DEFINE_string('regularization', '3DCNNs',
                            """Regularization method.""")
+tf.app.flags.DEFINE_string('feature', 'uninet',
+                           """ feature extraction branch """)
 tf.app.flags.DEFINE_boolean('refinement', False,
                            """Whether to apply depth map refinement for 3DCNNs""")
 
 # training parameters
+tf.app.flags.DEFINE_string('gpu', '0',
+                           """ gpu to use """)
 tf.app.flags.DEFINE_integer('num_gpus', 1,
                             """Number of GPUs.""")
 tf.app.flags.DEFINE_integer('batch_size', 1, 
@@ -172,6 +176,7 @@ def average_gradients(tower_grads):
         grad_and_var = (grad, v)
         average_grads.append(grad_and_var)
     return average_grads
+
 
 def train(traning_list):
     """ training mvsnet """
@@ -352,12 +357,14 @@ def train(traning_list):
                     step += FLAGS.batch_size * FLAGS.num_gpus
                     total_step += FLAGS.batch_size * FLAGS.num_gpus
 
+
 def main(argv=None):  # pylint: disable=unused-argument
     """ program entrance """
     # Prepare all training samples
+    os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu
     sample_list = gen_dtu_resized_path(FLAGS.dtu_data_root)
     # Shuffle
-    random.shuffle(sample_list)
+    # random.shuffle(sample_list)
     # Training entrance.
     train(sample_list)
 

@@ -23,7 +23,7 @@ from model import *
 from loss import *
 
 tf.app.flags.DEFINE_integer('gpu', '2',
-                            """gpu to use""")
+                            """gpu id to use, comma seperated""")
 # dataset parameters
 tf.app.flags.DEFINE_string('dense_folder', None, 
                            """Root path to dense folder.""")
@@ -34,13 +34,13 @@ tf.app.flags.DEFINE_integer('ckpt_step', 100000,
                             """ckpt step.""")
 
 # input parameters
-tf.app.flags.DEFINE_integer('view_num', 5,
+tf.app.flags.DEFINE_integer('view_num', 4,
                             """Number of images (1 ref image and view_num - 1 view images).""")
 tf.app.flags.DEFINE_integer('max_d', 256, 
                             """Maximum depth step when testing.""")
-tf.app.flags.DEFINE_integer('max_w', 1600, 
+tf.app.flags.DEFINE_integer('max_w', 600, 
                             """Maximum image width when testing.""")
-tf.app.flags.DEFINE_integer('max_h', 1200, 
+tf.app.flags.DEFINE_integer('max_h', 400, 
                             """Maximum image height when testing.""")
 tf.app.flags.DEFINE_float('sample_scale', 0.25, 
                             """Downsample scale for building cost volume (W and H).""")
@@ -56,12 +56,13 @@ tf.app.flags.DEFINE_bool('adaptive_scaling', True,
 # network architecture
 tf.app.flags.DEFINE_string('regularization', 'GRU',
                            """Regularization method, including '3DCNNs' and 'GRU'""")
-tf.app.flags.DEFINE_boolean('refinement', False,
+tf.app.flags.DEFINE_boolean('refinement', True,
                            """Whether to apply depth map refinement for MVSNet""")
 tf.app.flags.DEFINE_bool('inverse_depth', True,
                            """Whether to apply inverse depth for R-MVSNet""")
 
 FLAGS = tf.app.flags.FLAGS
+
 
 class MVSGenerator:
     """ data generator class, tf only accept generator without param """
@@ -101,7 +102,7 @@ class MVSGenerator:
                         cam = load_cam(cam_file, FLAGS.interval_scale)
                         images.append(image)
                         cams.append(cam)
-                print ('range: ', cams[0][1, 3, 0], cams[0][1, 3, 1], cams[0][1, 3, 2], cams[0][1, 3, 3])
+                print('range: ', cams[0][1, 3, 0], cams[0][1, 3, 1], cams[0][1, 3, 2], cams[0][1, 3, 3])
 
                 # determine a proper scale to resize input 
                 resize_scale = 1
@@ -116,15 +117,23 @@ class MVSGenerator:
                         if width_scale > w_scale:
                             w_scale = width_scale
                     if h_scale > 1 or w_scale > 1:
-                        print ("max_h, max_w should < W and H!")
+                        print("max_h, max_w should < W and H!")
                         exit(-1)
                     resize_scale = h_scale
                     if w_scale > h_scale:
                         resize_scale = w_scale
+                # from matplotlib import pyplot as plt
+                # plt.figure()
+                # plt.imshow(images[4].astype('uint8'))
+                # plt.show()
+
+                print('the resize_scale is: %f' % resize_scale)
+
                 scaled_input_images, scaled_input_cams = scale_mvs_input(images, cams, scale=resize_scale)
 
                 # crop to fit network
                 croped_images, croped_cams = crop_mvs_input(scaled_input_images, scaled_input_cams)
+
 
                 # center images
                 centered_images = []
@@ -136,9 +145,15 @@ class MVSGenerator:
                 scaled_cams = scale_mvs_camera(croped_cams, scale=FLAGS.sample_scale)
 
                 # return mvs input
+                # from matplotlib import pyplot as plt
+                # for img in croped_images:
+                #     plt.figure()
+                #     plt.imshow(img)
+                # plt.show()
+                #     # _ = cv2.resize(img, None, fx=FLAGS.sample_scale, fy=FLAGS.sample_scale)
                 scaled_images = []
                 for view in range(self.view_num):
-                    scaled_images.append(scale_image(croped_images[view], scale=FLAGS.sample_scale))
+                    scaled_images.append(scale_image(croped_images[view], x_scale=FLAGS.sample_scale, y_scale=FLAGS.sample_scale))
                 scaled_images = np.stack(scaled_images, axis=0)
                 croped_images = np.stack(croped_images, axis=0)
                 scaled_cams = np.stack(scaled_cams, axis=0)

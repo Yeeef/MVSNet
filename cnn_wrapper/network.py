@@ -15,10 +15,12 @@ import tensorflow as tf
 
 from tools.common import Notify
 
-DEFAULT_PADDING = 'SAME'
+DEFAULT_PADDING = 'same'
 
 # lyf: elegant, beautiful
 # op is a func, layer_decorated is used to wrap / decorate the op
+
+
 def layer(op):
     """Decorator for composable network layers."""
 
@@ -227,16 +229,27 @@ class Network(object):
                          biased=biased, reuse=self.reuse, separable=separable)
 
         # tranpose: [bs, h, w, c] to [bs, c, h, w] following the paper
+
         x = tf.transpose(conv, [0, 3, 1, 2])
         shape = tf.shape(x)
         N = shape[0]
-        C = x.get_shape()[1]
+        C = x.get_shape().as_list()[1]
         H = shape[2]
         W = shape[3]
         if channel_wise:
-            G = max(1, C / group_channel)
+            try:
+                G = max(1, C / group_channel)
+            except TypeError as te:
+                print(te)
+                print(type(C), type(group_channel))
+                exit(-1)
+
         else:
             G = min(group, C)
+        # print('yeeef made test here: ')
+        # print('channel_wise: {}'.format(channel_wise))
+        # print('N: {}, ')
+        # print('-' * 100)
 
         # normalization 
         x = tf.reshape(x, [N, G, C // G, H, W])
@@ -307,7 +320,7 @@ class Network(object):
                   'kernel_regularizer': self.regularizer,
                   'bias_regularizer': self.regularizer if biased else None,
                   'name': name,
-                  'padding': padding}
+                  'padding': 'same'}
 
         if len(input_tensor.get_shape()) == 4:
             return tf.layers.conv2d_transpose(input_tensor, **kwargs)
@@ -358,6 +371,11 @@ class Network(object):
 
         # group normalization
         x = tf.transpose(deconv, [0, 3, 1, 2])
+        # sess = tf.InteractiveSession()
+        # print('-' * 100)
+        # print(name)
+        # # print(tf.shape(deconv))
+        # print('-' * 100)
         shape = tf.shape(x)
         N = shape[0]
         C = x.get_shape()[1]
