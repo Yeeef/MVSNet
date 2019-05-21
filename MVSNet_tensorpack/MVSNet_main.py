@@ -67,27 +67,9 @@ def get_train_conf(model, args):
     callbacks = [
         ModelSaver(),
         EstimatedTimeLeft(),
-        # SummaryGradient()
     ]
-    # infs = [ScalarStats(names=['loss'], prefix='val')]
-    # if nr_tower == 1:
-    #     # single-GPU inference with queue prefetch
-    #     callbacks.append(
-    #         InferenceRunner(
-    #             val_data,
-    #             infs)
-    #     )
-    # else:
-    #     # multi-GPU inference (with mandatory queue prefetch)
-    #     callbacks.append(DataParallelInferenceRunner(
-    #         val_data, infs, list(range(nr_tower))))
     callbacks.extend([
         GPUUtilizationTracker(),
-        # MinSaver('val_loss',
-        #          filename='min_val_loss.tfmodel'),
-
-        # GraphProfiler(dump_tracing=True, dump_event=True)
-
     ])
 
     return TrainConfig(
@@ -115,17 +97,6 @@ def evaluate(model, sess_init, args):
     :return:
     """
     out_path = args.out
-    # if not os.path.exists(out_path):
-    #     logger.warn(f'{out_path} does not exist, aumatically create for you')
-    #     os.makedirs(out_path)
-    # else:
-    #     logger.warn(f'{out_path} exists, it will be overwritten, y or n?')
-    #     response = input()
-    #     if response != 'y':
-    #         logger.info(f'get {response} as answer, exit -1')
-    #         exit(-1)
-    #     else:
-    #         logger.info(f'{out_path} will be overwritten')
 
     pred_conf = PredictConfig(
         model=model,
@@ -142,16 +113,18 @@ def evaluate(model, sess_init, args):
     avg_less_one_acc = 0.
     avg_less_three_acc = 0.
     ds_len = len(ds_val)
+    logger.info('begin evaluating')
     for i in range(ds_len):
+        logger.info('datapoint %d' % i)
         prob_map, coarse_depth, refine_depth, imgs, loss, less_one_accuracy, less_three_accuracy = pred_func()
         batch_size, h, w, *_ = prob_map.shape
         ref_img = imgs[0]
         assert ref_img.shape[3] == 3, ref_img.shape
         for j in range(batch_size):
             # print(prob_map[j].shape)
-            # plt.imsave(path.join(out_path, str(global_count) + '_prob.png'), np.squeeze(prob_map[j]), cmap='rainbow')
-            # plt.imsave(path.join(out_path, str(global_count) + '_depth.png'), np.squeeze(coarse_depth[j]), cmap='rainbow')
-            # plt.imsave(path.join(out_path, str(global_count) + '_rgb.png'), np.squeeze(ref_img[j]).astype('uint8'))
+            plt.imsave(path.join(out_path, str(global_count) + '_prob.png'), np.squeeze(prob_map[j]), cmap='rainbow')
+            plt.imsave(path.join(out_path, str(global_count) + '_depth.png'), np.squeeze(coarse_depth[j]), cmap='rainbow')
+            plt.imsave(path.join(out_path, str(global_count) + '_rgb.png'), np.squeeze(ref_img[j]).astype('uint8'))
 
             global_count += 1
             avg_loss += loss
@@ -177,13 +150,13 @@ def test(model, sess_init, args):
     :return:
     """
     data_dir = args.data
-    out_dir = args.out
+    out_base = args.out
     view_num = args.view_num
     max_h = args.max_h
     max_w = args.max_w
     max_d = args.max_d
     interval_scale = args.interval_scale
-    logger.info('data_dir: %s, out_dir: %s' % (data_dir, out_dir))
+    logger.info('data_dir: %s, out_dir: %s' % (data_dir, out_base))
 
     pred_conf = PredictConfig(
         model=model,
@@ -192,7 +165,8 @@ def test(model, sess_init, args):
         output_names=['prob_map', 'coarse_depth', 'refine_depth']
     )
     # create imgs and cams data
-    data_points = list(DTU.make_test_data(data_dir, view_num, max_h, max_w, max_d, interval_scale))
+    # data_points = list(DTU.make_test_data(data_dir, view_num, max_h, max_w, max_d, interval_scale))
+    data_points = DTU.make_test_dataset(data_dir, view_num, max_h, max_w, max_d, interval_scale)
     # model.batch_size = len(data_points)
     pred_func = OfflinePredictor(pred_conf)
 
@@ -218,31 +192,56 @@ def test(model, sess_init, args):
     #     downsample_rgb = cv2.resize(rgb, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR)
     #     depth_point_list = PointCloudGenerator.gen_3d_point_with_rgb(coarse_depth, downsample_rgb, intrinsic)
     #     PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % str(i)))
-    logger.info('len of data_points: %d' % len(data_points))
-
+    # logger.info('len of data_points: %d' % len(data_points))
+    # Function here assumes batch = 1
+    dir_count = 0
+    view_num_count = 0
     for idx, dp in enumerate(data_points):
-
+        out_dir = path.join(out_base, str(dir_count))
+        if not path.exists(out_dir):
+            os.makedirs(out_dir)
         imgs, cams = dp
         batch_prob_map, batch_coarse_depth, batch_refine_depth = pred_func(np.expand_dims(imgs, 0), np.expand_dims(cams, 0))
         logger.info('shape of batch_prob_map: {}'.format(batch_prob_map.shape))
         prob_map, coarse_depth, refine_depth = np.squeeze(batch_prob_map), np.squeeze(batch_coarse_depth), np.squeeze(batch_refine_depth)
+        quality_depth = np.where(prob_map > args.threshold, refine_depth, np.zeros_like(refine_depth))
+        mask_mat = np.where(prob_map > args.threshold, np.ones_like(refine_depth), np.zeros_like(refine_depth))
         ref_img, ref_cam = imgs[0], cams[0]
+        rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
         logger.info('shape of ref_img: {}'.format(ref_img.shape))
         logger.info('shape of imgs: {}'.format(imgs.shape))
+        downsample_rgb = cv2.resize(rgb, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR)
+        quality_depth_upsample = cv2.resize(quality_depth, None, fx=4, fy=4, interpolation=cv2.INTER_NEAREST)
+        depth_upsample = cv2.resize(refine_depth, None, fx=4, fy=4, interpolation=cv2.INTER_NEAREST)
+        cv2.imwrite(path.join(out_dir, str(idx) + '_depth_quality.exr'), quality_depth_upsample)
+        cv2.imwrite(path.join(out_dir, str(idx) + '_depth.exr'), depth_upsample)
 
-        rgb = cv2.cvtColor(ref_img, cv2.COLOR_BGR2RGB)
         plt.imsave(path.join(out_dir, str(idx) + '_prob.png'), prob_map, cmap='rainbow')
         plt.imsave(path.join(out_dir, str(idx) + '_depth.png'), coarse_depth, cmap='rainbow')
-        plt.imsave(path.join(out_dir, str(idx) + '_rgb.png'), refine_depth.astype('uint8'))
-        Cam.write_cam(ref_cam, path.join(out_dir, str(idx) + '_cam.txt'))
+        plt.imsave(path.join(out_dir, str(idx) + '_depth_quality.png'), quality_depth, cmap='rainbow')
+        plt.imsave(path.join(out_dir, str(idx) + '_rgb.png'), rgb.astype('uint8'))
+
+        Cam.write_cam(ref_cam, path.join(out_dir, str(idx) + '_cam.txt'), intrinsic_scale=4.)
+
+        rainbow_depth_quality = cv2.imread(path.join(out_dir, str(idx) + '_depth_quality.png'))
+        rainbow_depth_quality = cv2.cvtColor(rainbow_depth_quality, cv2.COLOR_BGR2RGB)
+        rainbow_depth_quality = np.tile(np.expand_dims(mask_mat, -1), [1, 1, 3]) * rainbow_depth_quality
+        rainbow_depth_quality_up_sample = cv2.resize(rainbow_depth_quality, None, fx=4, fy=4,
+                                                         interpolation=cv2.INTER_NEAREST)
+        alpha = 0.5
+        fused_rgb = (1 - alpha) * rgb + alpha * rainbow_depth_quality_up_sample
+        plt.imsave(path.join(out_dir, str(idx) + '_fused_rgb.png'), fused_rgb.astype('uint8'))
 
         intrinsic, *_ = Cam.get_depth_meta(ref_cam, 'intrinsic')
-        print(intrinsic)
         ma = np.ma.masked_equal(coarse_depth, 0.0, copy=False)
         logger.info('value range: %f -> %f' % (ma.min(), ma.max()))
-        downsample_rgb = cv2.resize(rgb, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR)
-        depth_point_list = PointCloudGenerator.gen_3d_point_with_rgb(coarse_depth, downsample_rgb, intrinsic)
+        depth_point_list = PointCloudGenerator.gen_3d_point_with_rgb(coarse_depth, downsample_rgb, intrinsic, prob_map,
+                                                                     args.threshold)
         PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % str(idx)))
+        view_num_count += 1
+        if view_num_count == 5:
+            view_num_count = 0
+            dir_count += 1
 
 
 def mvsnet_main():
@@ -263,6 +262,7 @@ def mvsnet_main():
     parser.add_argument('--view_num', required=True, type=int)
     parser.add_argument('--refine', default=False)
     parser.add_argument('--feature', help='feature extraction branch', choices=['uninet', 'unet'], default='unet')
+    parser.add_argument('--threshold', type=float)
 
     args = parser.parse_args()
 
@@ -278,7 +278,7 @@ def mvsnet_main():
 
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
                        branch_function=feature_branch_function, is_refine=args.refine, height=args.max_h,
-                       width=args.max_w)
+                       width=args.max_w, view_num=args.view_num)
 
         if args.exp_name is None:
             if not args.refine:
@@ -313,7 +313,7 @@ def mvsnet_main():
         logger.set_logger_dir(args.out)
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
                        branch_function=feature_branch_function, is_refine=args.refine, height=args.max_h,
-                       width=args.max_w)
+                       width=args.max_w, view_num=args.view_num)
         sess_init = get_model_loader(args.load)
         avg_loss, avg_less_three_acc, avg_less_one_acc = evaluate(model, sess_init, args)
         logger.info(f'val loss: {avg_loss}')
@@ -327,7 +327,7 @@ def mvsnet_main():
         logger.set_logger_dir(args.out)
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
                        branch_function=feature_branch_function, is_refine=args.refine, height=args.max_h,
-                       width=args.max_w)
+                       width=args.max_w, view_num=args.view_num)
         sess_init = get_model_loader(args.load)
         test(model, sess_init, args)
 

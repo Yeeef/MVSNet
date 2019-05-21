@@ -213,6 +213,16 @@ class DTU(RNGDataFlow):
             yield [imgs, cams, depth_image]
 
     @staticmethod
+    def make_test_dataset(base_dir, view_num, max_h, max_w, max_d, interval_scale):
+        data_dirs = os.listdir(base_dir)
+        data_dirs = sorted(data_dirs, key=int)
+        data_dirs = [os.path.join(base_dir, data_dir) for data_dir in data_dirs]
+        for data_dir in data_dirs:
+            dps = list(DTU.make_test_data(data_dir, view_num, max_h, max_w, max_d, interval_scale))
+            for dp in dps:
+                yield dp
+
+    @staticmethod
     def make_test_data(data_dir, view_num, max_h, max_w, max_d, interval_scale):
         """
         the data_dir should be organized like:
@@ -226,6 +236,7 @@ class DTU(RNGDataFlow):
         assert 'images' in dir_files and 'cams' in dir_files and 'pair.txt' in dir_files
         sample_list = gen_test_input_sample_list(data_dir, view_num)
         logger.info('sample_list: %s' % sample_list)
+
         for data in sample_list:
             imgs = []
             cams = []

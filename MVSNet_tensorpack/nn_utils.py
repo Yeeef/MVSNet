@@ -173,13 +173,13 @@ def simple_cost_volume_regularization(cost_volume, training, trainable):
         base_filter = 8
         with tf.variable_scope('cost_volume_regularization'):
             with rename_tflayer_get_variable():
-                # l1_0 = conv3d_bn_relu(cost_volume, base_filter * 2, 3, strides=2, training=training,
-                #                       trainable=trainable,
-                #                       name='3dconv1_0')
-                # l2_0 = conv3d_bn_relu(l1_0, base_filter * 4, 3, 2, training, trainable, '3dconv2_0')
-                # l5_0 = deconv3d_bn_relu(l2_0, base_filter * 2, 3, 2, training, trainable, name='3dconv5_0')
-                # l6_0 = deconv3d_bn_relu(l5_0, base_filter, 3, 2, training, trainable, name='3dconv6_0')
-                l6_2 = tf.layers.conv3d(cost_volume, 1, 3, strides=1, activation=None, name='3dconv6_2')
+                l1_0 = conv3d_bn_relu(cost_volume, base_filter * 2, 3, strides=2, training=training,
+                                      trainable=trainable,
+                                      name='3dconv1_0')
+                l2_0 = conv3d_bn_relu(l1_0, base_filter * 4, 3, 2, training, trainable, '3dconv2_0')
+                l5_0 = deconv3d_bn_relu(l2_0, base_filter * 2, 3, 2, training, trainable, name='3dconv5_0')
+                l6_0 = deconv3d_bn_relu(l5_0, base_filter, 3, 2, training, trainable, name='3dconv6_0')
+                l6_2 = tf.layers.conv3d(l6_0, 1, 3, strides=1, activation=None, name='3dconv6_2')
 
                 regularized_cost_volume = tf.squeeze(l6_2, axis=4, name='regularized_cost_volume')
 
@@ -396,43 +396,7 @@ def mvsnet_gn_relu(x, name=None):
     return x
 
 
-
 @layer_register
-def _groupnorm(x, group=32, epsilon=1e-5, training=None,
-               beta_initializer=tf.constant_initializer(),
-               gamma_initializer=tf.constant_initializer(1.)):
-    """
-    https://arxiv.org/abs/1803.08494
-    TODO: Add a NHWC version.
-    """
-    # with tf.variable_scope(name):
-    shape = x.get_shape().as_list()
-    ndims = len(shape)
-    assert ndims == 4, shape
-    chan = shape[1]
-    assert chan % group == 0, chan
-
-    group_size = chan // group
-
-    orig_shape = tf.shape(x)
-    h, w = orig_shape[2], orig_shape[3]
-
-    x = tf.reshape(x, tf.stack([-1, group, group_size, h, w]))
-
-    mean, var = tf.nn.moments(x, [2, 3, 4], keep_dims=True)
-
-    new_shape = [1, group, group_size, 1, 1]
-
-    beta = tf.get_variable('beta', [chan], initializer=beta_initializer, trainable=training)
-    beta = tf.reshape(beta, new_shape)
-
-    gamma = tf.get_variable('gamma', [chan], initializer=gamma_initializer, trainable=training)
-    gamma = tf.reshape(gamma, new_shape)
-
-    out = tf.nn.batch_normalization(x, mean, var, beta, gamma, epsilon, name='output')
-    return tf.reshape(out, orig_shape, name='output')
-
-
 def GroupNorm(x, group, gamma_initializer=tf.constant_initializer(1.)):
     """
     https://arxiv.org/abs/1803.08494

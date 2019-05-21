@@ -61,7 +61,6 @@ class MVSNet(ModelDesc):
 
     # height = 512
     # width = 640
-    view_num = 3
     data_format = 'channels_last'
     lambda_ = 1.
 
@@ -82,7 +81,7 @@ class MVSNet(ModelDesc):
     """Learning rate decay rate"""
     decay_rate = 0.9
 
-    def __init__(self, depth_num, bn_training, bn_trainable, batch_size, branch_function, is_refine, height, width):
+    def __init__(self, depth_num, bn_training, bn_trainable, batch_size, branch_function, is_refine, height, width, view_num):
         super(MVSNet, self).__init__()
         # self.is_training = is_training
         self.bn_training = bn_training
@@ -93,6 +92,7 @@ class MVSNet(ModelDesc):
         self.is_refine = is_refine
         self.height = height
         self.width = width
+        self.view_num = view_num
 
     def inputs(self):
         return [
@@ -138,10 +138,9 @@ class MVSNet(ModelDesc):
             regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
             # regularized_cost_volume: b, d, h/4, w/4
             # regularized_cost_volume = simple_cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
-
             # shape of coarse_depth: b, 1, h/4, w/4
             # shape of prob_map: b, h/4, w/4, 1
-            # TODO: no need to pass batch_size as param
+            # TODO: no need to pass batch_size as param, actually, it is needed, because it is needed in the graph buiding
             coarse_depth, prob_map = soft_argmin('soft_argmin', regularized_cost_volume, depth_start, depth_end, self.depth_num,
                                        depth_interval, self.batch_size)
 

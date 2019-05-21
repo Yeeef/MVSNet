@@ -1,2 +1,5 @@
-.idea
-.vscode
+*.idea
+*.vscode
+*__pycache__
+*val_result
+*test_result*
