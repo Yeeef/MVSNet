@@ -39,9 +39,12 @@ def obtain_depths_with_parsed_dict(parsed_dict, cors):
 def obtain_depths_with_log_path(log_path, cors):
     log_manager = LogManager(log_path)
     parsed_dict_list = log_manager.parse()
+    depths_list = []
     for parsed_dict in parsed_dict_list:
         depths = obtain_depths_with_parsed_dict(parsed_dict, cors)
-        max_depth, min_depth, median_depth, mean_depths = depth_statistics(depths)
+        depths_list.append(depths)
+    return depths_list
+
 
 def depth_statistics(depths):
     max_depth = max(depths)
@@ -50,10 +53,10 @@ def depth_statistics(depths):
     mean_depth = np.mean(depths)
     # percentile_4 = np.percentile(depths, 0.4)
     # percentile_6 = np.percentile()
-    print('max_depth: %f, min_depth: %f, mean_depth: %f, median_depth: %f' % (max_depth, min_depth, mean_depth, median_depth))
-    quantile = [np.quantile(depths, per) for per in np.arange(0.1, 1, 0.1)]
-    print('percentile statistics: {}'.format(quantile))
-    return max_depth, min_depth, median_depth, mean_depth
+    # print('max_depth: %f, min_depth: %f, mean_depth: %f, median_depth: %f' % (max_depth, min_depth, mean_depth, median_depth))
+    quantile = [np.quantile(depths, per) for per in np.arange(0.05, 1, 0.05)]
+    # print('percentile statistics: {}'.format(quantile))
+    return quantile
 
 
 if __name__ == "__main__":

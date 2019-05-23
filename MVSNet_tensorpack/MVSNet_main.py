@@ -213,31 +213,31 @@ def test(model, sess_init, args):
         downsample_rgb = cv2.resize(rgb, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR)
         quality_depth_upsample = cv2.resize(quality_depth, None, fx=4, fy=4, interpolation=cv2.INTER_NEAREST)
         depth_upsample = cv2.resize(refine_depth, None, fx=4, fy=4, interpolation=cv2.INTER_NEAREST)
-        cv2.imwrite(path.join(out_dir, str(idx) + '_depth_quality.exr'), quality_depth_upsample)
-        cv2.imwrite(path.join(out_dir, str(idx) + '_depth.exr'), depth_upsample)
+        cv2.imwrite(path.join(out_dir, str(view_num_count) + '_depth_quality.exr'), quality_depth_upsample)
+        cv2.imwrite(path.join(out_dir, str(view_num_count) + '_depth.exr'), depth_upsample)
 
-        plt.imsave(path.join(out_dir, str(idx) + '_prob.png'), prob_map, cmap='rainbow')
-        plt.imsave(path.join(out_dir, str(idx) + '_depth.png'), coarse_depth, cmap='rainbow')
-        plt.imsave(path.join(out_dir, str(idx) + '_depth_quality.png'), quality_depth, cmap='rainbow')
-        plt.imsave(path.join(out_dir, str(idx) + '_rgb.png'), rgb.astype('uint8'))
+        plt.imsave(path.join(out_dir, str(view_num_count) + '_prob.png'), prob_map, cmap='rainbow')
+        plt.imsave(path.join(out_dir, str(view_num_count) + '_depth.png'), coarse_depth, cmap='rainbow')
+        plt.imsave(path.join(out_dir, str(view_num_count) + '_depth_quality.png'), quality_depth, cmap='rainbow')
+        plt.imsave(path.join(out_dir, str(view_num_count) + '_rgb.png'), rgb.astype('uint8'))
 
-        Cam.write_cam(ref_cam, path.join(out_dir, str(idx) + '_cam.txt'), intrinsic_scale=4.)
+        Cam.write_cam(ref_cam, path.join(out_dir, str(view_num_count) + '_cam.txt'), intrinsic_scale=4.)
 
-        rainbow_depth_quality = cv2.imread(path.join(out_dir, str(idx) + '_depth_quality.png'))
+        rainbow_depth_quality = cv2.imread(path.join(out_dir, str(view_num_count) + '_depth_quality.png'))
         rainbow_depth_quality = cv2.cvtColor(rainbow_depth_quality, cv2.COLOR_BGR2RGB)
         rainbow_depth_quality = np.tile(np.expand_dims(mask_mat, -1), [1, 1, 3]) * rainbow_depth_quality
         rainbow_depth_quality_up_sample = cv2.resize(rainbow_depth_quality, None, fx=4, fy=4,
                                                          interpolation=cv2.INTER_NEAREST)
         alpha = 0.5
         fused_rgb = (1 - alpha) * rgb + alpha * rainbow_depth_quality_up_sample
-        plt.imsave(path.join(out_dir, str(idx) + '_fused_rgb.png'), fused_rgb.astype('uint8'))
+        plt.imsave(path.join(out_dir, str(view_num_count) + '_fused_rgb.png'), fused_rgb.astype('uint8'))
 
         intrinsic, *_ = Cam.get_depth_meta(ref_cam, 'intrinsic')
         ma = np.ma.masked_equal(coarse_depth, 0.0, copy=False)
         logger.info('value range: %f -> %f' % (ma.min(), ma.max()))
         depth_point_list = PointCloudGenerator.gen_3d_point_with_rgb(coarse_depth, downsample_rgb, intrinsic, prob_map,
                                                                      args.threshold)
-        PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % str(idx)))
+        PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % str(view_num_count)))
         view_num_count += 1
         if view_num_count == 5:
             view_num_count = 0

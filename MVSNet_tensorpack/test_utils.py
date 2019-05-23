@@ -247,6 +247,8 @@ def gen_dataset(base_dir, out_dir, depth_min, depth_interval):
     :param depth_interval:
     :return:
     """
+    assert isinstance(depth_min, (list, np.ndarray, tuple)), type(depth_min)
+    assert isinstance(depth_interval, (list, np.ndarray, tuple)), type(depth_interval)
 
     """ generate cam files """
     log_dir = path.join(base_dir, 'color_depth_log')
@@ -257,8 +259,8 @@ def gen_dataset(base_dir, out_dir, depth_min, depth_interval):
     """ make sure the out_dir is well formatted """
     make_standard_dataset_dir(out_dir)
 
-    for parsed_dict in parsed_dict_list:
-        standard_log_lines = log_manager.format_log(parsed_dict, depth_min, depth_interval)
+    for idx, parsed_dict in enumerate(parsed_dict_list):
+        standard_log_lines = log_manager.format_log(parsed_dict, depth_min[idx], depth_interval[idx])
         log_manager.write_log_lines(standard_log_lines, path.join(out_dir, 'cams', '%08d_cam.txt' % parsed_dict['id']))
 
     """ generate images """
