@@ -30,7 +30,7 @@ class LogManager(object):
             self.file_content_lines = infile.readlines()
         self.pt = 0
         self.end_of_file = len(self.file_content_lines)
-        print('end of file: {}'.format(self.end_of_file))
+        # print('end of file: {}'.format(self.end_of_file))
 
     def is_eof(self):
         return self.pt >= self.end_of_file
@@ -161,14 +161,17 @@ class PointCloudGenerator(object):
         return point_list
 
     @staticmethod
-    def gen_3d_point_with_rgb(depth_map, rgb, intrinsic):
+    def gen_3d_point_with_rgb(depth_map, rgb, intrinsic, prob_map=None, threshold=None):
         """
 
         :param depth_map:
         :param rgb: RGB not BGR!
         :param intrinsic:
+        :param prob_map: prob map, use to cast out low-quality depth values
+        :param threshold: threshold defines the boundary of low/high quaility
         :return:
         """
+
         assert len(depth_map.shape) in [2, 3], depth_map.shape
         assert len(rgb.shape) == 3, rgb.shape
         depth_map = np.squeeze(depth_map)
@@ -176,6 +179,12 @@ class PointCloudGenerator(object):
         _h, _w, c = rgb.shape
         assert c == 3 and h == _h and w == _w, (h, w, c)
 
+        if prob_map is not None:
+            assert threshold is not None, 'specify threshold when you use prob map to filter the depth'
+            mask_mat = np.where(prob_map > threshold, np.ones_like(depth_map), np.zeros_like(depth_map))
+        else:
+            mask_mat = np.ones_like(depth_map)
+        depth_map = mask_mat * depth_map
         fx, fy, cx, cy = intrinsic[0, 0], intrinsic[1, 1], intrinsic[0, 2], intrinsic[1, 2]
         point_list = []
         for row in range(h):
@@ -232,31 +241,35 @@ def is_img_file(file):
 def gen_dataset(base_dir, out_dir, depth_min, depth_interval):
     """
     generate a well-formmated dataset directly
-    :param base_dir:
+    :param base_dir: must contains color_depth_log
     :param out_dir:
     :param depth_min:
     :param depth_interval:
     :return:
     """
+    assert isinstance(depth_min, (list, np.ndarray, tuple)), type(depth_min)
+    assert isinstance(depth_interval, (list, np.ndarray, tuple)), type(depth_interval)
+
+    """ generate cam files """
+    log_dir = path.join(base_dir, 'color_depth_log')
+    log_path = path.join(log_dir, 'camera_params.log')
+    log_manager = LogManager(log_path)
+    parsed_dict_list = log_manager.parse()
 
     """ make sure the out_dir is well formatted """
     make_standard_dataset_dir(out_dir)
 
-    """ generate cam files """
-    log_dir = path.join(base_dir, 'realitycapture', 'color_depth_log')
-    log_path = path.join(log_dir, 'camera_params.log')
-    log_manager = LogManager(log_path)
-    parsed_dict_list = log_manager.parse()
-    for parsed_dict in parsed_dict_list:
-        standard_log_lines = log_manager.format_log(parsed_dict, depth_min, depth_interval)
+    for idx, parsed_dict in enumerate(parsed_dict_list):
+        standard_log_lines = log_manager.format_log(parsed_dict, depth_min[idx], depth_interval[idx])
         log_manager.write_log_lines(standard_log_lines, path.join(out_dir, 'cams', '%08d_cam.txt' % parsed_dict['id']))
 
     """ generate images """
-    img_dir = path.join(base_dir, 'realitycapture', 'color_depth_log')
+    img_dir = path.join(base_dir,  'color_depth_log')
     img_files = list(filter(is_img_file, os.listdir(img_dir)))
     for img_file in img_files:
         img_id, _ = path.splitext(img_file)
         img = cv2.imread(path.join(img_dir, img_file))
+        # shutil.copyfile(path.join(img_dir, img_file), path.join(out_dir, 'images', '%08d.jpg' % int(img_id)) )
         cv2.imwrite(path.join(out_dir, 'images', '%08d.jpg' % int(img_id)), img)
 
     """ generate pair.txt """
@@ -303,32 +316,6 @@ def post_process(base_dir):
         PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % file_id))
         prob_point_list = PointCloudGenerator.gen_3d_point_with_rgb(prob_map, rgb, intrinsic)
         PointCloudGenerator.write_as_obj(prob_point_list, path.join(out_dir, '%s_prob.obj' % file_id))
-
-
-def get_dataset(log_dir, out_dir, depth_min=425.0, depth_interval=2.5):
-    DTU_MAX_DEPTH = 933.8
-    log_reader = LogReader(log_dir)
-    # print(log_reader.end_of_file)
-    paresed_list = log_reader.parse()
-    print(len(paresed_list))
-    for componet_dict in paresed_list:
-        print(componet_dict['h'])
-        print(componet_dict['w'])
-        print(componet_dict['depth_min'])
-        print(componet_dict['depth_max'])
-        print(componet_dict['extrinsic'])
-        print(componet_dict['intrinsic'])
-        print('-'*100)
-    for parsed_dict in paresed_list:
-        # scaled_parsed_dict = ScaleHandler.scale_with_max_depths(DTU_MAX_DEPTH, parsed_dict)
-        # write_lines = LogFormatter.format(scaled_parsed_dict)
-        write_lines = LogFormatter.format(parsed_dict, depth_min=depth_min, depth_interval=depth_interval)
-        print(len(write_lines))
-        with open(os.path.join(out_dir, '%08d_cam.txt' % parsed_dict['id']), 'w') as outfile:
-            # outfile.writelines(write_lines)
-            for line in write_lines:
-                outfile.write(line)
-                outfile.write('\n')
 
 
 def generate_3d_point_cloud(rgb_path, depth_path, cam_path):
@@ -491,6 +478,7 @@ if __name__ == "__main__":
     # pair_write_buffer = gen_pair_txt(len(selected_ids), selected_ids)
     # with open(path.join(out_dir, 'pair.txt'), 'w') as outfile:
     #     [outfile.write(line) for line in pair_write_buffer]
-    post_process('/data3/lyf/mvsnet test/test2/depths_mvsnet')
+    # post_process('/data3/lyf/mvsnet test/test2/depths_mvsnet')
 
     # scale_translation(path.join(out_dir, 'cams'), 200)
+    gen_dataset('/data3/lyf/mvsnet_test/middleburry/test1', '/data3/lyf/mvsnet_test/middleburry/test_1', 5, 0.1)

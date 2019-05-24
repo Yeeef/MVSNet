@@ -1,3 +1,6 @@
 *.idea
 *.vscode
 *.DS_Store
+*__pycache__
+*val_result
+*test_result*

@@ -3,6 +3,7 @@ import cv2
 import re
 from tensorpack.utils import logger
 import tensorflow as tf
+import copy
 
 
 def mask_depth_image(depth_image, min_depth, max_depth):
@@ -43,16 +44,19 @@ class Cam(object):
             self.depth_interval = 1
 
     @staticmethod
-    def write_cam(cam_mat, out_path):
+    def write_cam(cam_mat, out_path, intrinsic_scale=1.):
         depth_min, depth_interval, depth_num, depth_max, extrinsic, intrinsic = \
          Cam.get_depth_meta(cam_mat, 'depth_min', 'depth_interval', 'depth_num', 'depth_max', 'extrinsic', 'intrinsic')
-
+        temp_intrinsic = copy.deepcopy(intrinsic)
+        fx, fy, cx, cy = intrinsic[0, 0], intrinsic[1, 1], intrinsic[0, 2], intrinsic[1, 2]
+        temp_intrinsic[0, 0], temp_intrinsic[1, 1], temp_intrinsic[0, 2], temp_intrinsic[1, 2] = fx*intrinsic_scale, fy*intrinsic_scale, \
+                                                                             cx*intrinsic_scale, cy*intrinsic_scale
         write_buffer = []
         write_buffer.append('extrinsic')
         for row in extrinsic:
             write_buffer.append(' '.join([str(item) for item in row]))
         write_buffer.append('\nintrinsic')
-        for row in intrinsic:
+        for row in temp_intrinsic:
             write_buffer.append(' '.join([str(item) for item in row]))
         write_buffer.append('\n%f %f %d %f' % (depth_min, depth_interval, depth_num, depth_max))
         with open(out_path, 'w') as outfile:
