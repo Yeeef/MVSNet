@@ -4,7 +4,7 @@
 
 #include "math_utils.h"
 
-PlaneParamEstimator::PlaneParamEstimator(double delta) : m_deltaSquared(delta*delta) {}
+PlaneParamEstimator::PlaneParamEstimator(double delta) : m_deltaSquared(delta * delta) {}
 /*****************************************************************************/
 /*
 * Compute the line parameters  [n_x,n_y,a_x,a_y]
@@ -34,13 +34,15 @@ bool PlaneParamEstimator::estimate(std::vector<float3 *> &data,
 * ʹ����С���˷��������������ϳ�ȷ��ֱ��ģ�͵��������
 */
 bool PlaneParamEstimator::leastSquaresEstimate(std::vector<float3 *> &data,
-																							 std::vector<double> &parameters)
+											   std::vector<double> &parameters)
 {
+	// TODO: float3 means a 3-element tuple?
 	float3 mean_pos = make_float3(0.0f, 0.0f, 0.0f);
 	for (int i = 0; i < data.size(); i++) {
 		mean_pos += (*data[i]);
 	}
 	mean_pos /= data.size();
+
 	Eigen::Matrix3f covariance = Eigen::Matrix3f::Zero();
 	for (int i = 0; i < data.size(); i++) {
 		float3 diff = (*data[i] - mean_pos);

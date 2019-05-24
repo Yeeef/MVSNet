@@ -92,19 +92,19 @@ public:
 	*/
 	template<class Estimator, class S, class T>
 	static std::vector<T*> compute(S & parameters,
-																 std::vector<int> & inliers,
-																 Estimator & paramEstimator,
-																 std::vector<T> &data,
-																 double desiredProbabilityForNoOutliers,
-																 double maximalOutlierPercentage,
-																 bool test = false);
+								   std::vector<int> & inliers,
+								   Estimator & paramEstimator,
+								   std::vector<T> &data,
+								   double desiredProbabilityForNoOutliers,
+								   double maximalOutlierPercentage,
+								   bool test = false);
 
 
 	/**
 	* Estimate the model parameters using the maximal consensus set by going over ALL possible
 	* subsets (brute force approach).
-	* Given: n -  data.size()
-	*        k - numForEstimate
+	* Given: n :  data.size()
+	*        k :  numForEstimate
 	* We go over all n choose k subsets       n!
 	*                                     ------------
 	*                                      (n-k)! * k!
@@ -124,8 +124,8 @@ public:
 	*/
 	template<class Estimator, class S, class T>
 	static std::vector<T*> compute(S &parameters,
-																	const Estimator & paramEstimator,
-																	const std::vector<T> &data);
+								   const Estimator & paramEstimator,
+								   const std::vector<T> &data);
 
 private:
 
@@ -193,8 +193,8 @@ std::vector<T *> Ransac::compute(S &parameters,
 {
 	unsigned int numDataObjects = (int)data.size();
 	unsigned int numForEstimate = paramEstimator.numForEstimate();
-	//there are less data objects than the minimum required for an exact fit, or
-	//all the data is outliers?
+	// there are less data objects than the minimum required for an exact fit, or
+	// all the data is outliers?
 	if (numDataObjects < numForEstimate || maximalOutlierPercentage >= 1.0)
 		return std::vector<T*>();
 
@@ -211,6 +211,7 @@ std::vector<T *> Ransac::compute(S &parameters,
 	// double outlierPercentage = maximalOutlierPercentage;
 	double numerator = log(1.0 - desiredProbabilityForNoOutliers);
 	double denominator = log(1 - pow((double)(1.0 - maximalOutlierPercentage), (double)(numForEstimate)));
+	// num of all tries
 	int allTries = choose(numDataObjects, numForEstimate);
 
 	//parameters.clear();
@@ -227,11 +228,11 @@ std::vector<T *> Ransac::compute(S &parameters,
 	numTries = (int)(numerator / denominator + 0.5);
 
 	//there are cases when the probablistic number of tries is greater than all possible sub-sets
-	numTries = numTries<allTries ? numTries : allTries;
+	numTries = numTries < allTries ? numTries : allTries;
 	if (test)
 		std::cout << "numTries: " << numTries << std::endl;
 
-	for (i = 0; i<numTries; i++) {
+	for (i = 0; i < numTries; i++) {
 		//randomly select data for exact model fit ('numForEstimate' objects).
 		memset(notChosen, '1', numDataObjects * sizeof(short));
 		curSubSetIndexes = new int[numForEstimate];
@@ -252,10 +253,11 @@ std::vector<T *> Ransac::compute(S &parameters,
 			k--;
 			exactEstimateData.push_back(&(data[k]));
 			notChosen[k] = 0;
+			// yeeef: useless at current config
 			maxIndex--;
 		}
-		//get the indexes of the chosen objects so we can check that this sub-set hasn't been
-		//chosen already
+		// get the indexes of the chosen objects so we can check that this sub-set hasn't been
+		// chosen already
 		for (l = 0, j = 0; j<(int)numDataObjects; j++) {
 			if (!notChosen[j]) {
 				curSubSetIndexes[l] = j + 1;
@@ -347,8 +349,8 @@ std::vector<T *> Ransac::compute(S &parameters,
 /*****************************************************************************/
 template<class Estimator, class S, class T>
 std::vector<T*> Ransac::compute(S &parameters,
-																const Estimator & paramEstimator,
-																const std::vector<T> &data)
+								const Estimator & paramEstimator,
+								const std::vector<T> &data)
 {
 	unsigned int numForEstimate = paramEstimator.numForEstimate();
 	std::vector<T *> leastSquaresEstimateData;
@@ -356,6 +358,7 @@ std::vector<T*> Ransac::compute(S &parameters,
 	int numVotesForBest = 0;
 	int *arr = new int[numForEstimate];
 	short *curVotes = new short[numDataObjects];  //one if data[i] agrees with the current model, otherwise zero
+	// can be seen as a mask
 	short *bestVotes = new short[numDataObjects];  //one if data[i] agrees with the best model, otherwise zero
 
 																								 //parameters.clear();
@@ -369,7 +372,7 @@ std::vector<T*> Ransac::compute(S &parameters,
 
 	//compute the least squares estimate using the largest sub set
 	if (numVotesForBest > 0) {
-		for (int j = 0; j<numDataObjects; j++) {
+		for (int j = 0; j < numDataObjects; j++) {
 			if (bestVotes[j])
 				leastSquaresEstimateData.push_back(&(data[j]));
 		}
@@ -382,6 +385,7 @@ std::vector<T*> Ransac::compute(S &parameters,
 
 	return leastSquaresEstimateData;
 }
+
 /*****************************************************************************/
 template<class Estimator, class T>
 void Ransac::computeAllChoices(const Estimator &paramEstimator, const std::vector<T> &data,
@@ -420,14 +424,14 @@ void Ransac::estimate(Estimator & paramEstimator, std::vector<T> &data,
 	memset(curVotes, '\0', numDataObjects * sizeof(short));
 	numVotesForCur = 0;
 
-	for (j = 0; j<numForEstimate; j++)
+	for (j = 0; j < numForEstimate; j++)
 		exactEstimateData.push_back(&(data[arr[j]]));
 	paramEstimator.estimate(exactEstimateData, exactEstimateParameters);
 	//singular data configuration
 	if (exactEstimateParameters.empty())
 		return;
 
-	for (j = 0; j<numDataObjects; j++) {
+	for (j = 0; j < numDataObjects; j++) {
 		if (paramEstimator.agree(exactEstimateParameters, data[j])) {
 			curVotes[j] = 1;
 			numVotesForCur++;
