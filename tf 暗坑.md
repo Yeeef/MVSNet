@@ -32,3 +32,16 @@
 ## tf.layers.batch_normalization
 
 一定要注意 axis 的设置
+
+## tf.nn.embedding_lookup
+
+这个函数小复杂，最主要的参数是 `params` 和 `ids`, 顾名思义，要通过 ids 里的 id 去一个 embedding 矩阵找对应的向量。就是 ids 的维度并不限于 (b,), 所以最终输出的维度是 list(ids.shape) + list(params.shape[1:]), embedding 被加在了最后一个维度
+
+## namescope and variable scope 
+
+difference 就不说了，name_scope 有用的一点就在于构造更好看的 graph, 但是变量命名没有加前缀，貌似也不是这样，这个地方行为确实奇怪。。。fc 在外边，drop out 又在里面。。。
+
+## tf.layers.dropout
+
+tensorpack 会自动帮我在 inferenceRunner 中变成一个 tf.identity 非常神奇
+
