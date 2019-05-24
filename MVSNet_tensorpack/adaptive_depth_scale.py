@@ -1,5 +1,3 @@
-import os
-from os import path
 import numpy as np
 from test_utils import LogManager
 
