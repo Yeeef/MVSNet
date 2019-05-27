@@ -23,16 +23,17 @@ OUT_BASE = '/data3/lyf/mvsnet_test/standard_dataset'
 
 
 if __name__ == "__main__":
-    cur_dir = DIR_COLLECTIONS[0]
+    cur_dir = DIR_COLLECTIONS[2]
     logger.info('cur_dir: %s' % cur_dir)
     dirs = os.listdir(cur_dir)
     dirs = [path.join(cur_dir, dir_) for dir_ in dirs if path.isdir(path.join(cur_dir, dir_))]
-    out_base = path.join(OUT_BASE, 'part1_adaptives')
+    out_base = path.join(OUT_BASE, 'part3_adaptives')
     invalid_dir = []
     for dir_ in tqdm.tqdm(dirs):
         basename = path.basename(dir_)
-        if '不准' in basename:
+        if '不准' in basename or '无法重建' in basename:
             print('ignore {}'.format(basename))
+            invalid_dir.append(dir_)
             continue
         num_match = re.search(NUM_RE, basename)
         if not num_match:
@@ -47,10 +48,10 @@ if __name__ == "__main__":
             exit(-1)
         try:
 
-            base_dir = path.join(dir_, 'realitycapture')
-            # base_dir = path.join(dir_, 'images')
-            # if not path.exists(base_dir):
-            #     base_dir = path.join(dir_, 'image')
+            # base_dir = path.join(dir_, 'realitycapture')
+            base_dir = path.join(dir_, 'images')
+            if not path.exists(base_dir):
+                base_dir = path.join(dir_, 'image')
             sparse_point_cloud_obj_path = path.join(base_dir, 'bundler_point_cloud.obj')
             log_path = path.join(base_dir, 'color_depth_log', 'camera_params.log')
             cors = parse_obj_file(sparse_point_cloud_obj_path)

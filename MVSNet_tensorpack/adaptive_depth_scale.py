@@ -57,6 +57,10 @@ def depth_statistics(depths):
     return quantile
 
 
+def check_3d_point():
+    pass
+
+
 if __name__ == "__main__":
     obj_path = '/data3/lyf/mvsnet_test/xuhantong20190503/selected_images2/selected_images/10real/image/' \
                'bundler_point_cloud.obj'

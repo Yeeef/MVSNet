@@ -161,6 +161,45 @@ class PointCloudGenerator(object):
         return point_list
 
     @staticmethod
+    def gen_3d_point_with_rgb_v2(depth_map, rgb, intrinsic, valid_cors, prob_map=None, threshold=None):
+        """
+
+        :param depth_map:
+        :param rgb:
+        :param intrinsic:
+        :param valid_cors: list of (x, y)
+        :param prob_map:
+        :param threshold:
+        :return:
+        """
+        assert len(depth_map.shape) in [2, 3], depth_map.shape
+        assert len(rgb.shape) == 3, rgb.shape
+        depth_map = np.squeeze(depth_map)
+        h, w = depth_map.shape
+        _h, _w, c = rgb.shape
+        assert c == 3 and h == _h and w == _w, (h, w, c)
+
+        if prob_map is not None:
+            assert threshold is not None, 'specify threshold when you use prob map to filter the depth'
+            mask_mat = np.where(prob_map > threshold, np.ones_like(depth_map), np.zeros_like(depth_map))
+        else:
+            mask_mat = np.ones_like(depth_map)
+        depth_map = mask_mat * depth_map
+        fx, fy, cx, cy = intrinsic[0, 0], intrinsic[1, 1], intrinsic[0, 2], intrinsic[1, 2]
+        point_list = []
+
+        for col, row in valid_cors:
+            r, g, b = rgb[row, col]
+            u, v = col, row
+            z = depth_map[row, col]
+            x = (u - cx) * z / fx
+            y = (v - cy) * z / fy
+            if z != 0:
+                point_list.append((x, y, z, r, g, b))
+
+        return point_list
+
+    @staticmethod
     def gen_3d_point_with_rgb(depth_map, rgb, intrinsic, prob_map=None, threshold=None):
         """
 
@@ -194,7 +233,8 @@ class PointCloudGenerator(object):
                 z = depth_map[row, col]
                 x = (u - cx) * z / fx
                 y = (v - cy) * z / fy
-                point_list.append((x, y, z, r, g, b))
+                if z != 0:
+                    point_list.append((x, y, z, r, g, b))
 
         return point_list
 
