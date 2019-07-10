@@ -51,6 +51,7 @@ def group_norm(input_tensor,
         output = tf.transpose(output, [0, 2, 3, 1])
         return output
 
+
 class ConvGRUCell(tf.contrib.rnn.RNNCell):
     """A GRU cell with convolutions instead of multiplications."""
 

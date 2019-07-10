@@ -139,6 +139,15 @@ class PointCloudGenerator(object):
         pass
 
     @staticmethod
+    def get_3d_point(point_2d, depth, intrinsic):
+        fx, fy, cx, cy = intrinsic[0, 0], intrinsic[1, 1], intrinsic[0, 2], intrinsic[1, 2]
+        u, v = point_2d
+        z = depth
+        x = (u - cx) * z / fx
+        y = (v - cy) * z / fy
+        return (x, y, z)
+
+    @staticmethod
     def get_fx_fy_cx_cy(intrinsic):
         fx, fy, cx, cy = intrinsic[0, 0], intrinsic[1, 1], intrinsic[0, 2], intrinsic[1, 2]
         return fx, fy, cx, cy

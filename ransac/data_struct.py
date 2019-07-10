@@ -58,7 +58,6 @@ class Point(object):
         return 'Point: (%f, %f, %f)' % (self.x, self.y, self.z)
 
 
-
 class Plane(object):
     def __init__(self, a, b, c, d):
         """

@@ -44,4 +44,5 @@ difference 就不说了，name_scope 有用的一点就在于构造更好看的 
 ## tf.layers.dropout
 
 tensorpack 会自动帮我在 inferenceRunner 中变成一个 tf.identity 非常神奇
+对于这些 inference 和 training 不同的层，都要给予特别的关注
 

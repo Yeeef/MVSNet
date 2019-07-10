@@ -81,7 +81,8 @@ class MVSNet(ModelDesc):
     """Learning rate decay rate"""
     decay_rate = 0.9
 
-    def __init__(self, depth_num, bn_training, bn_trainable, batch_size, branch_function, is_refine, height, width, view_num):
+    def __init__(self, depth_num, bn_training, bn_trainable, batch_size, branch_function, is_refine, height, width,
+                 view_num, regularize_type):
         super(MVSNet, self).__init__()
         # self.is_training = is_training
         self.bn_training = bn_training
@@ -93,6 +94,7 @@ class MVSNet(ModelDesc):
         self.height = height
         self.width = width
         self.view_num = view_num
+        self.regularize_type = regularize_type
 
     def inputs(self):
         return [
@@ -121,7 +123,7 @@ class MVSNet(ModelDesc):
                       data_format=self.data_format),\
              argscope(tf.layers.batch_normalization, axis=-1):
             # feature extraction
-            # shape: b, view_num, c, h/4, w/4
+            # shape: b, view_num, h/4, w/4, c
             feature_maps = feature_extraction_net(imgs, self.branch_function)
 
             # get depth_start and depth_interval batch-wise
@@ -133,50 +135,59 @@ class MVSNet(ModelDesc):
                                         , depth_interval, self.depth_num)
             # cost_volume = tf.get_variable('fake_cost_volume', (1, 32, 192, 128, 160))
 
-            # cost volume regularization
-            # shape of probability_volume: b, 1, d, h/4, w/4
-            regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
-            # regularized_cost_volume: b, d, h/4, w/4
-            # regularized_cost_volume = simple_cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
-            # shape of coarse_depth: b, 1, h/4, w/4
-            # shape of prob_map: b, h/4, w/4, 1
-            # TODO: no need to pass batch_size as param, actually, it is needed, because it is needed in the graph buiding
-            coarse_depth, prob_map = soft_argmin('soft_argmin', regularized_cost_volume, depth_start, depth_end, self.depth_num,
-                                       depth_interval, self.batch_size)
+            if self.regularize_type == '3DCNN':
+                # cost volume regularization
+                # shape of probability_volume: b, 1, d, h/4, w/4
+                regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
+                # regularized_cost_volume: b, d, h/4, w/4
+                # regularized_cost_volume = simple_cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
+                # shape of coarse_depth: b, 1, h/4, w/4
+                # shape of prob_map: b, h/4, w/4, 1
+                # TODO: no need to pass batch_size as param, actually, it is needed, because it is needed in the graph buiding
+                coarse_depth, prob_map = soft_argmin('soft_argmin', regularized_cost_volume, depth_start, depth_end,
+                                                     self.depth_num,
+                                                     depth_interval, self.batch_size)
 
+                # shape of refine_depth: b, 1, h/4, w/4
+                if self.is_refine:
+                    refine_depth = depth_refinement(coarse_depth, ref_img, depth_start, depth_end)
+                    loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval, 'coarse_loss')
+                    loss_refine, less_one_accuracy, less_three_accuracy = mvsnet_regression_loss(gt_depth, refine_depth,
+                                                                                                 depth_interval,
+                                                                                                 'refine_loss')
+                else:
+                    refine_depth = coarse_depth
+                    # loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval, 'coarse_loss')
+                    loss_refine, less_one_accuracy, less_three_accuracy = mvsnet_regression_loss(gt_depth, refine_depth,
+                                                                                                 depth_interval,
+                                                                                                 'refine_loss')
+                    loss_coarse = tf.identity(loss_refine, name='loss_coarse')
 
+                coarse_depth = tf.identity(coarse_depth, 'coarse_depth')
+                refine_depth = tf.identity(refine_depth, 'refine_depth')
+                prob_map = tf.identity(prob_map, 'prob_map')
+                loss = tf.add(loss_refine / 2, loss_coarse * self.lambda_ / 2, name='loss')
+                less_one_accuracy = tf.identity(less_one_accuracy, name='less_one_accuracy')
+                less_three_accuracy = tf.identity(less_three_accuracy, name='less_three_accuracy')
 
-            # shape of refine_depth: b, 1, h/4, w/4
-            if self.is_refine:
-                refine_depth = depth_refinement(coarse_depth, ref_img, depth_start, depth_end)
-                loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval, 'coarse_loss')
-                loss_refine, less_one_accuracy, less_three_accuracy = mvsnet_regression_loss(gt_depth, refine_depth,
-                                                                                   depth_interval, 'refine_loss')
             else:
-                refine_depth = coarse_depth
-                # loss_coarse, *_ = mvsnet_regression_loss(gt_depth, coarse_depth, depth_interval, 'coarse_loss')
-                loss_refine, less_one_accuracy, less_three_accuracy = mvsnet_regression_loss(gt_depth, refine_depth,
-                                                                                   depth_interval, 'refine_loss')
-                loss_coarse = tf.identity(loss_refine, name='loss_coarse')
-
-            coarse_depth = tf.identity(coarse_depth, 'coarse_depth')
-            refine_depth = tf.identity(refine_depth, 'refine_depth')
-            prob_map = tf.identity(prob_map, 'prob_map')
-            loss = tf.add(loss_refine / 2, loss_coarse * self.lambda_ / 2, name='loss')
-            less_one_accuracy = tf.identity(less_one_accuracy, name='less_one_accuracy')
-            less_three_accuracy = tf.identity(less_three_accuracy, name='less_three_accuracy')
+                prob_volume = gru_regularization(cost_volume, self.bn_training, self.bn_trainable)
+                loss, mae, less_one_accuracy, less_three_accuracy, coarse_depth = \
+                    mvsnet_classification_loss(
+                        prob_volume, gt_depth, self.depth_num, depth_start, depth_interval)
+                coarse_depth = tf.identity(coarse_depth, 'coarse_depth')
+                refine_depth = tf.identity(coarse_depth, 'refine_depth')
+                # prob_map = get_propability_map(prob_volume, coarse_depth, depth_start, depth_interval)
 
             with tf.variable_scope('summaries'):
                 with tf.device('/cpu:0'):
-                    # tf.summary.scalar('loss', loss)
-                    # tf.summary.scalar('coarse_loss', loss_coarse)
-                    # tf.summary.scalar('refine_loss', loss_refine)
-                    # tf.summary.scalar('less_one_accuracy', less_one_acc)
-                    # tf.summary.scalar('less_three_accuracy', less_three_acc)
-                    add_moving_summary(loss, loss_coarse, loss_refine, less_one_accuracy, less_three_accuracy)
-                # add_image_summary(tf.clip_by_value(tf.transpose(coarse_depth, [0, 2, 3, 1]), 0, 255)
-                #                   , name='coarse_depth')
-                add_image_summary(prob_map, name='prob_map')
+                    if self.regularize_type == '3DCNN':
+                        add_moving_summary(loss, loss_coarse, loss_refine, less_one_accuracy, less_three_accuracy)
+                    else:
+                        add_moving_summary(loss, less_one_accuracy, less_three_accuracy)
+
+                if self.regularize_type == '3DCNN':
+                    add_image_summary(prob_map, name='prob_map')
                 add_image_summary(coarse_depth
                                   , name='coarse_depth')
                 add_image_summary(refine_depth

@@ -157,8 +157,8 @@ def warping_layer(feature_maps, cams, depth_start, depth_interval, depth_num):
                                                     depth_interval=depth_interval)
             view_homographies.append(homographies)
         
-        # shape of feature_map: b, c, h, w
-        # shape of cost_volume: b, c, depth_num, h, w
+        # shape of feature_map: b, h, w, c
+        # shape of cost_volume: b, depth_num, h, w, c
         cost_volume = build_cost_volume(view_homographies, feature_maps, depth_num)
 
     return cost_volume
@@ -241,6 +241,46 @@ def cost_volume_regularization(cost_volume, training, trainable):
                 regularized_cost_volume = tf.squeeze(l6_2, axis=4, name='regularized_cost_volume')
 
     return regularized_cost_volume
+
+
+def gru_regularization(cost_volume, training, trainable):
+    with argscope([tf.layers.conv2d], use_bias=False, kernel_initializer=tf.glorot_uniform_initializer(),
+                  kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0), padding='same'), \
+         argscope([tf.layers.batch_normalization], epsilon=1e-5, momentum=0.99):
+        with tf.variable_scope("gru_regularization"):
+            with rename_tflayer_get_variable():
+                gru1_filters = 16
+                gru2_filters = 4
+                gru3_filters = 2
+                # b, d, h, w, c
+                cost_volume_shape = tf.shape(cost_volume)
+                batch = cost_volume_shape[0]
+                _, d, h, w, c = cost_volume.get_shape().as_list()
+                gru_input_shape = [h, w]
+                state1 = tf.zeros([batch, h, w, gru1_filters])
+                state2 = tf.zeros([batch, h, w, gru2_filters])
+                state3 = tf.zeros([batch, h, w, gru3_filters])
+                conv_gru1 = ConvGRUCell(shape=gru_input_shape, kernel=[3, 3], filters=gru1_filters)
+                conv_gru2 = ConvGRUCell(shape=gru_input_shape, kernel=[3, 3], filters=gru2_filters)
+                conv_gru3 = ConvGRUCell(shape=gru_input_shape, kernel=[3, 3], filters=gru3_filters)
+                
+                seperate_cost_volumes = tf.split(cost_volume, d, axis=1)
+                depth_costs = []
+                for single_cost_volume in seperate_cost_volumes:
+                    # b, h, w, c
+                    # gru
+                    single_cost_volume = tf.squeeze(single_cost_volume, axis=1)
+                    reg_cost1, state1 = conv_gru1(-single_cost_volume, state1, scope='conv_gru1')
+                    reg_cost2, state2 = conv_gru2(reg_cost1, state2, scope='conv_gru2')
+                    reg_cost3, state3 = conv_gru3(reg_cost2, state3, scope='conv_gru3')
+                    # reg_cost: b, h, w, 1
+                    reg_cost = tf.layers.conv2d(
+                        reg_cost3, 1, 3, padding='same', reuse=tf.AUTO_REUSE, name='prob_conv', use_bias=True)
+                    depth_costs.append(reg_cost)
+                # prob_volume: b, d, h, w, 1
+                prob_volume = tf.stack(depth_costs, axis=1)
+                prob_volume = tf.nn.softmax(prob_volume, axis=1, name='prob_volume')
+                return prob_volume
 
 
 # @layer_register(use_scope=True)
@@ -426,3 +466,79 @@ def GroupNorm(x, group, gamma_initializer=tf.constant_initializer(1.)):
 
     out = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-5, name='output')
     return tf.reshape(out, orig_shape, name='output')
+
+
+class ConvGRUCell(tf.contrib.rnn.RNNCell):
+    """A GRU cell with convolutions instead of multiplications."""
+
+    def __init__(self,
+                 shape,
+                 filters,
+                 kernel,
+                 initializer=None,
+                 activation=tf.tanh,
+                 normalize=True,
+                 data_format='channels_last'):
+        self._filters = filters
+        self._kernel = kernel
+        self._initializer = initializer
+        self._activation = activation
+        # self._size = tf.TensorShape(shape + [self._filters])
+        # self._size = tf.TensorShape([shape[0], shape[1], self._filters])
+
+        self._normalize = normalize
+        # TODO: feature_axis = 3?
+        # TODO: because the first axis is batch, actually we can just rewrite it as -1
+        if data_format == 'channels_last':
+            self._feature_axis = -1
+        else:
+            self._feature_axis = 1
+
+
+    # @property
+    # def state_size(self):
+    #     return self._size
+    #
+    # @property
+    # def output_size(self):
+    #     return self._size
+
+    def __call__(self, x, h, scope=None):
+        # shape of x,h: b,h,w,c
+        with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
+            with tf.variable_scope('Gates'):
+                # concatenation channel-wise
+                inputs = tf.concat([x, h], axis=self._feature_axis)
+
+                # convolution
+                conv = tf.layers.conv2d(
+                    inputs, 2 * self._filters, self._kernel, padding='same', name='conv')
+                reset_gate, update_gate = tf.split(conv, 2, axis=self._feature_axis)
+
+                with tf.variable_scope("reset_gate"):
+
+                    reset_gate = mvsnet_gn('gn', reset_gate, group_channel=16)
+                    reset_gate = tf.sigmoid(reset_gate)
+                with tf.variable_scope("update_gate"):
+
+                    update_gate = mvsnet_gn('gn', update_gate, group_channel=16)
+                    update_gate = tf.sigmoid(update_gate)
+
+            with tf.variable_scope('Output'):
+                # concatenation
+                inputs = tf.concat([x, reset_gate * h], axis=self._feature_axis)
+
+                # convolution
+                conv = tf.layers.conv2d(
+                    inputs, self._filters, self._kernel, padding='same', name='output_conv')
+
+                # group normalization
+                conv = mvsnet_gn('output_gn', conv,  group_channel=16)
+
+                # activation
+                y = self._activation(conv)
+
+                # soft update
+                output = update_gate * h + (1 - update_gate) * y
+
+            return output, output

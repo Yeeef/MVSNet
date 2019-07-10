@@ -133,12 +133,10 @@ def inference(images, cams, depth_num, depth_start, depth_interval, is_master_gp
 
     # filtered cost volume, size of (B, D, H, W, 1)
     if is_master_gpu:
-        # filtered_cost_volume_tower = RegNetUS0({'data': cost_volume}, is_training=True, reuse=False)
-        filtered_cost_volume_tower = SimpleRegNetUS0({'data': cost_volume}, is_training=True, reuse=False)
+        filtered_cost_volume_tower = RegNetUS0({'data': cost_volume}, is_training=True, reuse=False)
 
     else:
-        # filtered_cost_volume_tower = RegNetUS0({'data': cost_volume}, is_training=True, reuse=True)
-        filtered_cost_volume_tower = SimpleRegNetUS0({'data': cost_volume}, is_training=True, reuse=True)
+        filtered_cost_volume_tower = RegNetUS0({'data': cost_volume}, is_training=True, reuse=True)
 
     filtered_cost_volume = tf.squeeze(filtered_cost_volume_tower.get_output(), axis=-1)
 
@@ -332,7 +330,8 @@ def inference_prob_recurrent(images, cams, depth_num, depth_start, depth_interva
                 ave_feature2 = ave_feature2 + tf.square(warped_view_feature)
             ave_feature = ave_feature / FLAGS.view_num
             ave_feature2 = ave_feature2 / FLAGS.view_num 
-            cost = ave_feature2 - tf.square(ave_feature) 
+            cost = ave_feature2 - tf.square(ave_feature)
+            print(cost.get_shape().as_list())
             
             # gru
             reg_cost1, state1 = conv_gru1(-cost, state1, scope='conv_gru1')

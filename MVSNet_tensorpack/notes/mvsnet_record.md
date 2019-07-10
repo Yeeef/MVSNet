@@ -1,4 +1,4 @@
-# record
+# MVSNet record
 
 __4.24__
 
@@ -52,6 +52,10 @@ __5.13__
 
 跑完一版之后，去 evaluate val_data, 达到真正意义的复现
 
+__7.7__
+
+今天的第一个任务在于搞定公网 ip 的问题，争取跑一次 R-MVSNet
+
 ### todo
 
 - [x] 添加 image summary
@@ -94,7 +98,7 @@ __5.13__
 
 ## scale to multiple gpus
 
-## gpu 0,1,2,3 batch_size 1
+### gpu 0,1,2,3 batch_size 1
 
 - is graph alright?
   - [ ] how to make a cool graph like Deepv3+？
@@ -140,3 +144,5 @@ Every `tf.layers.batch_normalization` will add 2 update ops(if `training=True`) 
 ### 3d cost volume regularization?
 
 - bug found, last layer should not be activated by BNReLU.
+
+找到 bug 后已经成功复现

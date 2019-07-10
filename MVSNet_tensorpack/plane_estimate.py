@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 import cv2
 from test_utils import PointCloudGenerator, LogManager
 from DataManager import Cam
+import shutil
 
 """ data structs """
 
@@ -28,6 +29,27 @@ class Point(object):
 
     def __str__(self):
         return 'Point: ({}, {})'.format(self.x, self.y)
+
+
+class Plane(object):
+    def __init__(self, a, b, c, d):
+        """
+        ax + by + cz + d = 0
+        """
+        self.a, self.b, self.c, self.d = a, b, c, d
+
+    def norm(self):
+        return np.array([self.a, self.b, self.c])
+
+    def offset(self):
+        return self.d
+
+    def get_z_given_xy(self, x, y):
+        assert self.c != 0
+        return -(self.d + self.a * x + self.b * y) / self.c
+
+    def __str__(self):
+        return 'Plane: %f * x + %f * y + %f * z + %f = 0' % (self.a, self.b, self.c, self.d)
 
 
 class Polygon(object):
@@ -191,7 +213,8 @@ class LogFile(object):
                 polygon_meta = self._ptr_line_content()
                 _, num_points = self._parse_polygon_meta(polygon_meta)
                 polygon = self._parse_polygon_info(num_points)
-                polygon_list.append(polygon)
+                if len(polygon.points) > 2:
+                    polygon_list.append(polygon)
         except IOError as ioe:
             print('Error: ', ioe)
             exit()
@@ -203,7 +226,7 @@ class LogFile(object):
 
 
 def find_and_parse_log_file(dir_path, log_pattern):
-    all_files = os.listdir(test_log_dir)
+    all_files = os.listdir(dir_path)
     log_files = []
 
     for file in all_files:
@@ -224,6 +247,7 @@ def find_and_parse_log_file(dir_path, log_pattern):
     polygons = parser.parse_content()
     for polygon in polygons:
         polygon.print_info()
+
     return (img_id, polygons)
 
 
@@ -255,86 +279,188 @@ def extract_valid_depth_from_line(line, depth_map):
     xmin, xmax = min_and_max(x1, x2)
     ymin, ymax = min_and_max(y1, y2)
     valid_depths = []
-    for y in range(ymin, ymax + 1):
-        x_val = line.get_x_given_y(y)
-        if int(x_val) == x_val:
-            left_x = int(x_val) - 1
-            right_x = int(x_val) + 1
-        else:
-            left_x = int(x_val)
-            right_x = int(x_val) + 1
-        depth_left = depth_map[y, left_x]
-        depth_right = depth_map[y, right_x]
-        if depth_left != 0:
-            valid_depths.append((left_x, y, depth_left))
-        if depth_right != 0:
-            valid_depths.append((right_x, y, depth_right))
-
-    for x in range(xmin, xmax + 1):
-        y_val = line.get_y_given_x(x)
-        if int(y_val) == y_val:
-            up_y = int(y_val) - 1
-            bottom_y = int(y_val) + 1
-        else:
-            up_y = int(y_val)
-            bottom_y = int(y_val) + 1
-        depth_up, depth_bottom = depth_map[up_y, x], depth_map[bottom_y, x]
-        if depth_up != 0:
-            valid_depths.append((x, up_y, depth_up))
-        if depth_bottom != 0:
-            valid_depths.append((x, bottom_y, depth_bottom))
+    if ymin != ymax:
+        for y in range(ymin, ymax + 1):
+            x_val = line.get_x_given_y(y)
+            if int(x_val) == x_val:
+                middle_x = int(x_val)
+                left_x = int(x_val) - 1
+                right_x = int(x_val) + 1
+                depth_middle = depth_map[y, middle_x]
+            else:
+                left_x = int(x_val)
+                right_x = int(x_val) + 1
+                depth_middle = 0
+        
+            depth_left = depth_map[y, left_x]
+            depth_right = depth_map[y, right_x]
+            if depth_middle != 0:
+                valid_depths.append((middle_x, y, depth_middle))
+            if depth_left != 0:
+                valid_depths.append((left_x, y, depth_left))
+            if depth_right != 0:
+                valid_depths.append((right_x, y, depth_right))
+    if xmin != xmax:
+        for x in range(xmin, xmax + 1):
+            y_val = line.get_y_given_x(x)
+            if int(y_val) == y_val:
+                middle_y = int(y_val)
+                up_y = int(y_val) - 1
+                bottom_y = int(y_val) + 1
+                depth_middle = depth_map[middle_y, x]
+            else:
+                up_y = int(y_val)
+                bottom_y = int(y_val) + 1
+                depth_middle = 0
+            depth_up, depth_bottom = depth_map[up_y, x], depth_map[bottom_y, x]
+            if depth_middle != 0:
+                valid_depths.append((x, middle_y, depth_middle))
+            if depth_up != 0:
+                valid_depths.append((x, up_y, depth_up))
+            if depth_bottom != 0:
+                valid_depths.append((x, bottom_y, depth_bottom))
     return valid_depths
 
 
-if __name__ == "__main__":
-    test_log_dir = '/home/yeeef/Desktop/part1/0'
-    LOG_PATTERN = re.compile(r'([0-9]{1,2})_fused_rgb\.log')
-    img_id, polygons = find_and_parse_log_file(test_log_dir, LOG_PATTERN)
-    img = cv2.imread(path.join(test_log_dir, '{}_rgb.png'.format(img_id)))
+def write_3d_points(file_name, points_list):
+    if path.exists(file_name):
+        print('{} already exists, check it first'.format(file_name))
+    with open(file_name, 'w') as outfile:
+        for point in points_list:
+            x, y, z, *_ = point
+            outfile.write('{} {} {}\n'.format(x, y, z))
+
+
+def call_ransac_plane_estimator(points_path, bin_path, threeD_point_list):
+    temp_out_path = './tmp.txt'
+    os.system('{} {} {}'.format(bin_path, points_path, temp_out_path))
+    with open(temp_out_path, 'r') as infile:
+        lines = infile.readlines()
+    a, b, c = [float(item) for item in lines[0].split()]
+    x0, y0, z0 = [float(item) for item in lines[1].split()]
+    d = -(a * x0 + b * y0 + c * z0)
+    plane = Plane(a, b, c, d)
+    idxs = [int(item) for item in lines[2:]]
+    selected_points = np.array(threeD_point_list)[idxs]
+
+    return plane, selected_points
+
+
+def one_scene(scene_base_dir, log_pattern):
+    # read image, log, depth, intrinsic
+    img_id, polygons = find_and_parse_log_file(scene_base_dir, log_pattern)
+
+    img = cv2.imread(path.join(scene_base_dir, '{}_rgb.png'.format(img_id)))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    cam = Cam(path.join(test_log_dir, '{}_cam.txt'.format(img_id)))
-    intrinsic = cam.intrinsic_mat
-    plt.imshow(img)
-    for polygon in polygons:
-        point_list = polygon.points
-        for point in point_list:
-            x, y = point.pt
-            plt.scatter(x, y)
-    # for polygon in polygons:
-    #     boundaries = polygon.boundaries
-    #
-    #     for line in boundaries:
-    #         print(line)
-    #         p1, p2 = line.p1, line.p2
-    #         x1, y1 = p1
-    #         x2, y2 = p2
-    #         plt.plot([x1, x2], [y1, y2])
-
-    demo_polygon = polygons[10]
-    boundaries = demo_polygon.boundaries
-
-    quality_depth_path = path.join(test_log_dir, '{}_depth_quality.exr'.format(img_id))
+    quality_depth_path = path.join(scene_base_dir, '{}_depth_quality.exr'.format(img_id))
     quality_depth = cv2.imread(quality_depth_path, cv2.IMREAD_UNCHANGED)
     assert quality_depth.shape[:2] == img.shape[:2], (img.shape, quality_depth.shape)
-    threeD_point_list = []
-    mask = np.zeros_like(quality_depth)
-    valid_xs = []
-    valid_ys = []
-    for line in boundaries:
-        print(line.p1, line.p2)
-        print(line)
-        p1, p2 = line.p1, line.p2
-        x1, y1 = p1
-        x2, y2 = p2
-        plt.plot([x1, x2], [y1, y2])
-        valid_depths = extract_valid_depth_from_line(line, quality_depth)
-        valid_xs.extend([item[0] for item in valid_depths])
-        valid_ys.extend([item[1] for item in valid_depths])
-        mask[valid_ys, valid_xs] = 1
-        print(len(valid_depths), valid_depths)
+    cam = Cam(path.join(scene_base_dir, '{}_cam.txt'.format(img_id)))
+    intrinsic = cam.intrinsic_mat
+    extrinsic = cam.extrinsic_mat
 
-    plt.show()
-    threeD_point_list = (PointCloudGenerator.gen_3d_point_with_rgb_v2(quality_depth, img, intrinsic, zip(valid_xs, valid_ys)))
+    out_base_path = path.join(scene_base_dir, f'{img_id}_polygon_post_process', 'verbose_output')
+    if path.exists(out_base_path):
+        shutil.rmtree(out_base_path)
+    os.makedirs(out_base_path)
 
-    PointCloudGenerator.write_as_obj(threeD_point_list, 'test.obj')
+    planes = []
+    corner_points_list = []
+    # find
+    for polygon_id, polygon in enumerate(polygons):
+        # gen 3d points of a polygon
+        boundaries = polygon.boundaries
+        polygon_corners = polygon.points
+        corners_3d = []
+        for polygon_corner in polygon_corners:
+            u, v = polygon_corner
+            x, y, z = PointCloudGenerator.get_3d_point((u, v), quality_depth[v, u], intrinsic)
+            corners_3d.append((x, y, z))
+
+        valid_cors = []
+        for line in boundaries:
+            valid_depths = extract_valid_depth_from_line(line, quality_depth)
+            valid_cors.extend([item[:2] for item in valid_depths])
+        point_list_3D = (PointCloudGenerator.gen_3d_point_with_rgb_v2(quality_depth, img, intrinsic,
+                                                                          valid_cors))
+
+        # write 3d points for ransac algorithm
+        write_3d_points(path.join(out_base_path, '{}_{}_3d_points.txt'.format(img_id, polygon_id)), point_list_3D)
+
+        # write 3d points obj file for visualization and debug
+        PointCloudGenerator.write_as_obj(point_list_3D,
+                                         path.join(out_base_path, '{}_{}_3d_points.obj'.format(img_id, polygon_id)))
+
+        # call the ransac program, read the output file, get the plane and the selected points
+        plane, selected_points = call_ransac_plane_estimator(
+                                    path.join(out_base_path, '{}_{}_3d_points.txt'.format(img_id, polygon_id)),
+                                    '/home/yeeef/Desktop/ransac_program/cmake-build-debug/ransac_program',
+                                    point_list_3D)
+        planes.append(plane)
+
+        # write the selected points for visualization and debug
+        PointCloudGenerator.write_as_obj(selected_points,
+                                         path.join(out_base_path, f'{img_id}_{polygon_id}_plane_3d_points.obj'))
+
+        # new corner points
+        corner_points = []
+        for point in corners_3d:
+            x, y, z = point
+            new_z = plane.get_z_given_xy(x, y)
+            corner_points.append((x, y, new_z))
+            print('previous: {}, now: {}'.format(z, new_z))
+        corner_points_list.append(corner_points)
+
+    # write everything to a log file for future usage
+    log_path = path.join(scene_base_dir, f'{img_id}_polygon_post_process', f'{img_id}_planes_info.log')
+    write_polygon_plane_log_file(log_path, extrinsic, intrinsic, planes, corner_points_list)
+
+
+def write_polygon_plane_log_file(log_path, extrinsic, intrinsic, planes, corner_points_list):
+    assert extrinsic.shape == (4, 4), extrinsic.shape
+    assert intrinsic.shape == (3, 3), intrinsic.shape
+    assert len(planes) == len(corner_points_list)
+
+    def to_str_iterable(iterable):
+        return [str(item) for item in iterable]
+
+    num_polygon = len(planes)
+    with open(log_path, 'w') as outfile:
+        outfile.write('extrinsic\n')
+        for i in range(4):
+            extrinsic_row = extrinsic[i, :]
+            outfile.write(' '.join(to_str_iterable(extrinsic_row)))
+            outfile.write('\n')
+        outfile.write('\n')
+        outfile.write('intrinsic\n')
+        for i in range(3):
+            intrinsic_row = intrinsic[i, :]
+            outfile.write(' '.join(to_str_iterable(intrinsic_row)))
+            outfile.write('\n')
+        outfile.write('\n')
+        outfile.write('polygon %d\n' % num_polygon)
+        for idx in range(num_polygon):
+            corner_points = corner_points_list[idx]
+            outfile.write("\npoints %d\n" % len(corner_points))
+            for corner_point in corner_points:
+                outfile.write(' '.join(to_str_iterable(corner_point)))
+                outfile.write('\n')
+            outfile.write('\nplane\n')
+            plane = planes[idx]
+            outfile.write("{} {} {} {}\n".format(plane.a, plane.b, plane.c, plane.d))
+
+
+if __name__ == "__main__":
+    base_dir = '/home/yeeef/Desktop/part1'
+    LOG_PATTERN = re.compile(r'([0-9]{1,2})_fused_rgb\.log')
+    #
+    all_dirs = os.listdir(base_dir)
+    all_dirs = [path.join(base_dir, item) for item in all_dirs]
+    all_dirs = [item for item in all_dirs if path.isdir(item)]
+    all_dirs = sorted(all_dirs, key=lambda x: int(path.basename(x)))
+    for base_dir in all_dirs:
+        one_scene(base_dir, LOG_PATTERN)
+    #
+    # one_scene('/home/yeeef/Desktop/part1/20', LOG_PATTERN)
+
 

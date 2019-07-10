@@ -263,6 +263,7 @@ def mvsnet_main():
     parser.add_argument('--refine', default=False)
     parser.add_argument('--feature', help='feature extraction branch', choices=['uninet', 'unet'], default='unet')
     parser.add_argument('--threshold', type=float)
+    parser.add_argument('--regularize', default='GRU')
 
     args = parser.parse_args()
 
@@ -278,7 +279,7 @@ def mvsnet_main():
 
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
                        branch_function=feature_branch_function, is_refine=args.refine, height=args.max_h,
-                       width=args.max_w, view_num=args.view_num)
+                       width=args.max_w, view_num=args.view_num, regularize_type=args.regularize)
 
         if args.exp_name is None:
             if not args.refine:
