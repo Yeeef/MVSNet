@@ -118,6 +118,7 @@ def crop_mvs_input(images, cams, max_h, max_w, base_image_size=8, depth_image=No
         finish_h = start_h + new_h
         finish_w = start_w + new_w
         images[view] = images[view][start_h:finish_h, start_w:finish_w]
+        # crop 的时候内参要变(图片中心变了)
         cams[view][1][0][2] = cams[view][1][0][2] - start_w
         cams[view][1][1][2] = cams[view][1][1][2] - start_h
 

@@ -61,15 +61,15 @@ class MVSNet(ModelDesc):
 
     # height = 512
     # width = 640
-    data_format = 'channels_last'
+    data_format = 'channels_last'  # do not change
     lambda_ = 1.
 
-    weight_decay = 1.
+    weight_decay = 1.  # FIXME: it is useless!
 
     """
     To apply on normalization parameters, use '.*/W|.*/gamma|.*/beta'
     """
-    regularization_pattern = '.*/W |.*/b$'
+    regularization_pattern = '.*/W |.*/b$'  # FIXME: it is useless!
 
     debug_param_summary = True
 
@@ -105,11 +105,8 @@ class MVSNet(ModelDesc):
         ]
 
     def _preprocess(self, imgs, gt_depth):
-        # transpose image
         with tf.variable_scope('preprocess'):
             imgs = center_image(imgs)
-            # imgs = tf.transpose(imgs, [0, 1, 4, 2, 3], name='transpose_imgs')
-            # gt_depth = tf.transpose(gt_depth, [0, 3, 1, 2], name='transpose_gt_depth')
             ref_img = imgs[:, 0]
             ref_img = tf.identity(ref_img, name='ref_img')
             return imgs, gt_depth, ref_img
@@ -130,16 +127,15 @@ class MVSNet(ModelDesc):
             depth_start, depth_interval, depth_end = get_depth_meta(cams, depth_num=self.depth_num)
 
             # warping layer
-            # shape of cost_volume: b, c, depth_num, h/4, w/4
+            # shape of cost_volume: b, depth_num, h/4, w/4, c
             cost_volume = warping_layer('warping', feature_maps, cams, depth_start
                                         , depth_interval, self.depth_num)
             # cost_volume = tf.get_variable('fake_cost_volume', (1, 32, 192, 128, 160))
 
             if self.regularize_type == '3DCNN':
                 # cost volume regularization
-                # shape of probability_volume: b, 1, d, h/4, w/4
-                regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
                 # regularized_cost_volume: b, d, h/4, w/4
+                regularized_cost_volume = cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
                 # regularized_cost_volume = simple_cost_volume_regularization(cost_volume, self.bn_training, self.bn_trainable)
                 # shape of coarse_depth: b, 1, h/4, w/4
                 # shape of prob_map: b, h/4, w/4, 1
@@ -163,6 +159,7 @@ class MVSNet(ModelDesc):
                                                                                                  'refine_loss')
                     loss_coarse = tf.identity(loss_refine, name='loss_coarse')
 
+                # FIXME: it is weried because I never use refine part
                 coarse_depth = tf.identity(coarse_depth, 'coarse_depth')
                 refine_depth = tf.identity(refine_depth, 'refine_depth')
                 prob_map = tf.identity(prob_map, 'prob_map')
