@@ -66,11 +66,14 @@ def unet_feature_extraction_branch(img):
 
             l4_1 = Conv2D('2dconv4_1', l4_0, base_filter*16, 3, strides=1, activation=mvsnet_gn_relu)
             l4_2 = Conv2D('2dconv4_2', l4_1, base_filter*16, 3, strides=1, activation=mvsnet_gn_relu)
+            # 1 / 8
             l5_0 = Conv2DTranspose('2dconv5_0', l4_2, base_filter*8, 3, strides=2, activation=mvsnet_gn_relu)
 
+            # 1 / 4
             concat5_0 = tf.concat((l5_0, l3_2), axis=3, name='2dconcat5_0')
             l5_1 = Conv2D('2dconv5_1', concat5_0, base_filter*8, 3, strides=1, activation=mvsnet_gn_relu)
             l5_2 = Conv2D('2dconv5_2', l5_1, base_filter*8, 3, strides=1, activation=mvsnet_gn_relu)
+            # 1 / 2
             l6_0 = Conv2DTranspose('2dconv6_0', l5_2, base_filter*4, 3, strides=2, activation=mvsnet_gn_relu)
 
             concat6_0 = tf.concat((l6_0, l2_2), axis=3, name='2dconcat6_0')
