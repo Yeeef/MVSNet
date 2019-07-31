@@ -18,39 +18,54 @@ DIR_COLLECTIONS = ['/data3/lyf/mvsnet_test/xuhantong20190503/selected_images',
                    '/data3/lyf/mvsnet_test/xuhantong20190503/selected_images2/selected_images',
                    '/data3/lyf/mvsnet_test/xuhantong20190503/selected_images2/selected_images_1',
                    ]
-NUM_RE = re.compile(r'(\d+)[real]*')
-OUT_BASE = '/data3/lyf/mvsnet_test/standard_dataset'
+
+NEW_DIR_COLLECTIONS = [
+    '/media/yeeef/Seagate Expansion Drive/training_data/selected_images_1_camera_polygon',
+    '/media/yeeef/Seagate Expansion Drive/training_data/selected_images_2_camera_polygon',
+    '/media/yeeef/Seagate Expansion Drive/training_data/selected_images_3_camera_polygon',
+    '/media/yeeef/Seagate Expansion Drive/training_data/selected_images_4_camera_polygon',
+    '/media/yeeef/Seagate Expansion Drive/training_data/selected_images_5_camera_polygon',
+    '/media/yeeef/Seagate Expansion Drive/training_data/selected_images_6_camera_polygon',
+    '/media/yeeef/Seagate Expansion Drive/training_data/selected_images_8_camera_polygon',
+
+]
+NUM_RE = re.compile(r'\d+$')
+OUT_BASE = '/data3/lyf/MVSNET/mvsnet_test/standard_dataset'
 
 
 if __name__ == "__main__":
-    cur_dir = DIR_COLLECTIONS[0]
+    data_idx = 6
+    cur_dir = NEW_DIR_COLLECTIONS[data_idx]
     logger.info('cur_dir: %s' % cur_dir)
     dirs = os.listdir(cur_dir)
     dirs = [path.join(cur_dir, dir_) for dir_ in dirs if path.isdir(path.join(cur_dir, dir_))]
-    out_base = path.join(OUT_BASE, 'part1_adaptives')
+    out_base = path.join(OUT_BASE, 'illumination_part{}_adaptives'.format(data_idx))
     invalid_dir = []
     for dir_ in tqdm.tqdm(dirs):
         basename = path.basename(dir_)
-        if '不准' in basename:
-            print('ignore {}'.format(basename))
-            continue
+        # if '不准' in basename or '无法重建' in basename:
+        #     print('ignore {}'.format(basename))
+        #     invalid_dir.append(dir_)
+        #     continue
         num_match = re.search(NUM_RE, basename)
         if not num_match:
+            print('ignore {}'.format(basename))
+            invalid_dir.append(dir_)
             continue
         try:
-            num = int(num_match.group(1))
+            num = int(num_match.group(0))
         except TypeError as te:
             # print(te)
             # print(num_match.group())
             print(basename)
-            print(num_match.group(1))
+            print(num_match.group(0))
             exit(-1)
         try:
 
-            base_dir = path.join(dir_, 'realitycapture')
-            # base_dir = path.join(dir_, 'images')
-            # if not path.exists(base_dir):
-            #     base_dir = path.join(dir_, 'image')
+            # base_dir = path.join(dir_, 'realitycapture')
+            base_dir = path.join(dir_, 'images')
+            if not path.exists(base_dir):
+                base_dir = path.join(dir_, 'image')
             sparse_point_cloud_obj_path = path.join(base_dir, 'bundler_point_cloud.obj')
             log_path = path.join(base_dir, 'color_depth_log', 'camera_params.log')
             cors = parse_obj_file(sparse_point_cloud_obj_path)
@@ -59,7 +74,7 @@ if __name__ == "__main__":
             min_depths = [quantile[0] for quantile in depths_quantile]
             max_depths = [quantile[-1] for quantile in depths_quantile]
             depths_interval = [max_depths[i] - min_depths[i] for i in range(len(depths_quantile))]
-            min_depths = [min_depths[i] - depths_interval[i] * 0.4 for i in range(len(min_depths))]
+            min_depths = [max(min_depths[i] - depths_interval[i] * 0.4, 0) for i in range(len(min_depths))]
             max_depths = [max_depths[i] + depths_interval[i] * 0.4 for i in range(len(min_depths))]
             depths_interval = [max_depths[i] - min_depths[i] for i in range(len(depths_quantile))]
             depths_interval = [depth_interval for depth_interval in depths_interval]

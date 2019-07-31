@@ -162,7 +162,7 @@ def test(model, sess_init, args):
         model=model,
         session_init=sess_init,
         input_names=['imgs', 'cams'],
-        output_names=['prob_map', 'coarse_depth', 'refine_depth']
+        output_names=['prob_map', 'coarse_depth', 'refine_depth', 'cost_volume_regularization/regularized_cost_volume']
     )
     # create imgs and cams data
     # data_points = list(DTU.make_test_data(data_dir, view_num, max_h, max_w, max_d, interval_scale))
@@ -201,9 +201,14 @@ def test(model, sess_init, args):
         if not path.exists(out_dir):
             os.makedirs(out_dir)
         imgs, cams = dp
-        batch_prob_map, batch_coarse_depth, batch_refine_depth = pred_func(np.expand_dims(imgs, 0), np.expand_dims(cams, 0))
+        batch_prob_map, batch_coarse_depth, batch_refine_depth, batch_reg_cost_volume = \
+            pred_func(np.expand_dims(imgs, 0), np.expand_dims(cams, 0))
         logger.info('shape of batch_prob_map: {}'.format(batch_prob_map.shape))
-        prob_map, coarse_depth, refine_depth = np.squeeze(batch_prob_map), np.squeeze(batch_coarse_depth), np.squeeze(batch_refine_depth)
+        # size of reg_cost_volume: d, h/4, w/4
+        prob_map, coarse_depth, refine_depth, reg_cost_volume = np.squeeze(batch_prob_map), \
+                                                                np.squeeze(batch_coarse_depth), \
+                                                                np.squeeze(batch_refine_depth), \
+                                                                np.squeeze(batch_reg_cost_volume)
         quality_depth = np.where(prob_map > args.threshold, refine_depth, np.zeros_like(refine_depth))
         mask_mat = np.where(prob_map > args.threshold, np.ones_like(refine_depth), np.zeros_like(refine_depth))
         ref_img, ref_cam = imgs[0], cams[0]
@@ -220,6 +225,8 @@ def test(model, sess_init, args):
         plt.imsave(path.join(out_dir, str(view_num_count) + '_depth.png'), coarse_depth, cmap='rainbow')
         plt.imsave(path.join(out_dir, str(view_num_count) + '_depth_quality.png'), quality_depth, cmap='rainbow')
         plt.imsave(path.join(out_dir, str(view_num_count) + '_rgb.png'), rgb.astype('uint8'))
+        # save the reg_cost_volume for future process
+        np.save(path.join(out_dir, str(view_num_count) + '_reg_cost_volume'), reg_cost_volume)
 
         Cam.write_cam(ref_cam, path.join(out_dir, str(view_num_count) + '_cam.txt'), intrinsic_scale=4.)
 
@@ -239,6 +246,7 @@ def test(model, sess_init, args):
                                                                      args.threshold)
         PointCloudGenerator.write_as_obj(depth_point_list, path.join(out_dir, '%s_depth.obj' % str(view_num_count)))
         view_num_count += 1
+        # FIXME: only works if the dir contains 5 imgs
         if view_num_count == 5:
             view_num_count = 0
             dir_count += 1
@@ -263,6 +271,7 @@ def mvsnet_main():
     parser.add_argument('--refine', default=False)
     parser.add_argument('--feature', help='feature extraction branch', choices=['uninet', 'unet'], default='unet')
     parser.add_argument('--threshold', type=float)
+    parser.add_argument('--regularize', default='3DCNN', choices=['3DCNN', 'GRU'])
 
     args = parser.parse_args()
 
@@ -278,7 +287,7 @@ def mvsnet_main():
 
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
                        branch_function=feature_branch_function, is_refine=args.refine, height=args.max_h,
-                       width=args.max_w, view_num=args.view_num)
+                       width=args.max_w, view_num=args.view_num, regularize_type=args.regularize)
 
         if args.exp_name is None:
             if not args.refine:
@@ -327,7 +336,7 @@ def mvsnet_main():
         logger.set_logger_dir(args.out)
         model = MVSNet(depth_num=args.max_d, bn_training=None, bn_trainable=None, batch_size=args.batch,
                        branch_function=feature_branch_function, is_refine=args.refine, height=args.max_h,
-                       width=args.max_w, view_num=args.view_num)
+                       width=args.max_w, view_num=args.view_num, regularize_type=args.regularize)
         sess_init = get_model_loader(args.load)
         test(model, sess_init, args)
 

@@ -171,10 +171,9 @@ def get_homographies(left_cam, right_cam, depth_num, depth_start, depth_interval
 
 
 def build_cost_volume(view_homographies, feature_maps, depth_num):
-    # _, view_num, c, h, w = feature_maps.get_shape().as_list()
     _, view_num, h, w, c = feature_maps.get_shape().as_list()
 
-    # shape: b, c, h, w
+    # shape: b, h, w, c
     ref_feature_map = feature_maps[:, 0]
     with tf.variable_scope('cost_volume_homography'):
         depth_costs = []
@@ -192,13 +191,11 @@ def build_cost_volume(view_homographies, feature_maps, depth_num):
             ave_feature = ave_feature / view_num
             ave_feature2 = ave_feature2 / view_num
             cost = ave_feature2 - tf.square(ave_feature)
-            # shape of cost: b, c, h, w
-            # shape of depth_costs: depth_num, b, c, h, w
+            # shape of cost: b, h, w, c
+            # shape of depth_costs: depth_num, b, h, w, c
             depth_costs.append(cost)
-        # shape of cost_volume: b, depth_num, c, h, w
+        # shape of cost_volume: b, depth_num, h, w, c
         cost_volume = tf.stack(depth_costs, axis=1)
-        # change cost volume to channels_first form
-        # cost_volume = tf.transpose(cost_volume, [0, 2, 1, 3, 4])
 
     return cost_volume
 
